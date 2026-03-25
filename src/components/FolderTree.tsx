@@ -13,7 +13,7 @@ import { Collapsible, CollapsibleContent } from './ui/collapsible'
 import { cn } from '@/lib/utils'
 import { validateName } from '@/lib/validation'
 import type { FolderNode } from '@/lib/models'
-import { getVisiblePaths } from '@/lib/tree-operations'
+import { getVisiblePaths, getNodeAtPath } from '@/lib/tree-operations'
 
 interface FolderTreeProps {
   nodes: FolderNode[]
@@ -30,7 +30,6 @@ interface FolderTreeProps {
   onRename: (path: number[], newName: string) => void
   onDuplicate: (paths: string[]) => void
   onDelete: (paths: string[]) => void
-  onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
   onIndent: (path: number[]) => void
   onOutdent: (path: number[]) => void
 }
@@ -43,6 +42,7 @@ interface NodeItemProps {
   isFocused: boolean
   isEditing: boolean
   expandedPaths: Set<string>
+  // Needed only for computing child isFocused/isEditing at the call site
   focusedPath: number[] | null
   editingPath: number[] | null
   onSelect: (paths: string[]) => void
@@ -54,14 +54,6 @@ interface NodeItemProps {
   onRename: (path: number[], newName: string) => void
   onDuplicate: (paths: string[]) => void
   onDelete: (paths: string[]) => void
-}
-
-function getNodeAtPath(nodes: FolderNode[], path: number[]): FolderNode | undefined {
-  if (path.length === 0) return undefined
-  const node = nodes[path[0]]
-  if (!node) return undefined
-  if (path.length === 1) return node
-  return getNodeAtPath(node.children, path.slice(1))
 }
 
 function NodeItem({
@@ -360,7 +352,8 @@ export function FolderTree({
   }, [onSelect, selectedPaths])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const isEditing = editingPath !== null
+    // While renaming, let the input handle all keys except Escape (cancel)
+    if (editingPath !== null && e.key !== 'Escape') return
 
     // Tab / Shift+Tab
     if (e.key === 'Tab') {
@@ -438,16 +431,7 @@ export function FolderTree({
 
     // Enter
     if (e.key === 'Enter') {
-      if (isEditing) {
-        // Commit rename (the input's onBlur will fire when focus leaves input)
-        onEditingChange(null)
-        const pathAtTime = focusedPath
-        setTimeout(() => {
-          if (pathAtTime) onAddSiblingAfter(pathAtTime)
-        }, 0)
-      } else {
-        if (focusedPath) onAddSiblingAfter(focusedPath)
-      }
+      if (focusedPath) onAddSiblingAfter(focusedPath)
       return
     }
 
@@ -459,12 +443,12 @@ export function FolderTree({
 
     // Escape
     if (e.key === 'Escape') {
-      if (isEditing) onEditingChange(null)
+      if (editingPath !== null) onEditingChange(null)
       return
     }
 
-    // Backspace / Delete (not editing)
-    if ((e.key === 'Backspace' || e.key === 'Delete') && !isEditing) {
+    // Backspace / Delete (not editing — guard already above, but kept for clarity)
+    if (e.key === 'Backspace' || e.key === 'Delete') {
       if (selectedPaths.length > 0) {
         onDelete(selectedPaths)
       } else if (focusedPath) {

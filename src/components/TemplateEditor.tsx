@@ -145,9 +145,12 @@ export function TemplateEditor({
     }
   }
 
+  // Reserved for Phase 4 drag-and-drop; not wired as a prop yet
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleMove = (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => {
     setFolders((prev) => moveNode(prev, fromPath, toPath, position))
   }
+  void handleMove // suppress noUnusedLocals until Phase 4
 
   const handleIndent = (path: number[]) => {
     const lastIdx = path[path.length - 1]
@@ -164,9 +167,10 @@ export function TemplateEditor({
     setFocusedPath(null)
   }
 
-  const handleOutdent = (path: number[]) => {
+  const handleOutdent = useCallback((path: number[]) => {
     setFolders((prev) => outdentNode(prev, path))
-  }
+    setFocusedPath(null)  // path changes after outdent
+  }, [])
 
   const handleAddSiblingAfter = (path: number[]) => {
     const newNode: FolderNode = { name: 'New Folder', children: [] }
@@ -255,7 +259,6 @@ export function TemplateEditor({
               onRename={handleRename}
               onDuplicate={handleDuplicateNodes}
               onDelete={handleDeleteNodes}
-              onMove={handleMove}
               onIndent={handleIndent}
               onOutdent={handleOutdent}
             />
