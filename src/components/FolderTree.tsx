@@ -368,7 +368,7 @@ export function FolderTree({
                   dropTarget.path.join(',') === pathStr
 
                 return (
-                  <Fragment key={`${pathStr}-${node.name}`}>
+                  <Fragment key={pathStr}>
                     {/* Drop indicator: blue line BEFORE this row */}
                     {dropTarget?.position === 'before' &&
                      dropTarget.path.join(',') === pathStr && (

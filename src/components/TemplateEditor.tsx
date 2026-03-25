@@ -94,6 +94,7 @@ export function TemplateEditor({
 
   const handleAddSubfolder = (path: number[]) => {
     setFolders((prev) => addNodeAt(prev, path, { name: 'New Folder', children: [] }))
+    setExpandedPaths((prev) => new Set([...prev, path.join(',')]))
   }
 
   const handleRename = (path: number[], newName: string) => {
