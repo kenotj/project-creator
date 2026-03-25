@@ -1,9 +1,6 @@
-function App() {
-  return (
-    <div>
-      <h1>ProjectCreator</h1>
-    </div>
-  )
-}
+// src/App.tsx (temporary smoke test)
+import { Button } from '@/components/ui/button'
 
-export default App
+export default function App() {
+  return <Button>Hello shadcn</Button>
+}
