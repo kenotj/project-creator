@@ -1,6 +1,6 @@
 // src/components/FolderTree.tsx
 import { useState, useRef, useEffect } from 'react'
-import { ChevronRight, ChevronDown, FolderIcon, FolderOpenIcon, FolderTreeIcon, PencilIcon, Trash2Icon, FolderPlusIcon } from 'lucide-react'
+import { ChevronRight, ChevronDown, FolderIcon, FolderOpenIcon, FolderTreeIcon, PencilIcon, Trash2Icon } from 'lucide-react'
 import { Button } from './ui/button'
 import {
   ContextMenu,
@@ -13,16 +13,26 @@ import { Collapsible, CollapsibleContent } from './ui/collapsible'
 import { cn } from '@/lib/utils'
 import { validateName } from '@/lib/validation'
 import type { FolderNode } from '@/lib/models'
+import { getVisiblePaths } from '@/lib/tree-operations'
 
 interface FolderTreeProps {
   nodes: FolderNode[]
   selectedPaths: string[]
+  focusedPath: number[] | null
+  editingPath: number[] | null
+  expandedPaths: Set<string>
   onSelect: (paths: string[]) => void
+  onFocusChange: (path: number[] | null) => void
+  onEditingChange: (path: number[] | null) => void
+  onToggleExpand: (path: number[]) => void
   onAddSubfolder: (path: number[]) => void
-  onAddSiblingFolder: (path: number[]) => void
+  onAddSiblingAfter: (path: number[]) => void
   onRename: (path: number[], newName: string) => void
   onDuplicate: (paths: string[]) => void
   onDelete: (paths: string[]) => void
+  onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
+  onIndent: (path: number[]) => void
+  onOutdent: (path: number[]) => void
 }
 
 interface NodeItemProps {
@@ -30,46 +40,52 @@ interface NodeItemProps {
   path: number[]
   selectedPaths: string[]
   siblingNames: string[]
+  isFocused: boolean
+  isEditing: boolean
+  expandedPaths: Set<string>
+  focusedPath: number[] | null
+  editingPath: number[] | null
   onSelect: (paths: string[]) => void
+  onFocusChange: (path: number[] | null) => void
+  onEditingChange: (path: number[] | null) => void
+  onToggleExpand: (path: number[]) => void
   onAddSubfolder: (path: number[]) => void
-  onAddSiblingFolder: (path: number[]) => void
+  onAddSiblingAfter: (path: number[]) => void
   onRename: (path: number[], newName: string) => void
   onDuplicate: (paths: string[]) => void
   onDelete: (paths: string[]) => void
 }
 
-
+function getNodeAtPath(nodes: FolderNode[], path: number[]): FolderNode | undefined {
+  if (path.length === 0) return undefined
+  const node = nodes[path[0]]
+  if (!node) return undefined
+  if (path.length === 1) return node
+  return getNodeAtPath(node.children, path.slice(1))
+}
 
 function NodeItem({
   node, path, selectedPaths, siblingNames,
-  onSelect, onAddSubfolder, onAddSiblingFolder, onRename, onDuplicate, onDelete
+  isFocused, isEditing, expandedPaths, focusedPath, editingPath,
+  onSelect, onFocusChange, onEditingChange, onToggleExpand,
+  onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete
 }: NodeItemProps) {
-  const [isOpen, setIsOpen] = useState(true)
-  const [isRenaming, setIsRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState(node.name)
   const [renameError, setRenameError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const escapePressedRef = useRef(false)
   const pathStr = path.join(',')
   const isSelected = selectedPaths.includes(pathStr)
+  const isExpanded = expandedPaths.has(pathStr)
+  const hasChildren = node.children.length > 0
 
   useEffect(() => {
-    if (isRenaming) {
+    if (isEditing) {
       setRenameValue(node.name)
       setRenameError(null)
       setTimeout(() => inputRef.current?.select(), 0)
     }
-  }, [isRenaming, node.name])
-
-  // Listen for the Rename toolbar button's broadcast
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<number[]>).detail
-      if (detail.join(',') === pathStr) setIsRenaming(true)
-    }
-    window.addEventListener('rename-node', handler)
-    return () => window.removeEventListener('rename-node', handler)
-  }, [path])
+  }, [isEditing, node.name])
 
   const commitRename = () => {
     if (escapePressedRef.current) {
@@ -86,60 +102,58 @@ function NodeItem({
       return
     }
     onRename(path, renameValue.trim())
-    setIsRenaming(false)
+    onEditingChange(null)
     setRenameError(null)
   }
 
   const cancelRename = () => {
     escapePressedRef.current = true
-    setIsRenaming(false)
+    onEditingChange(null)
     setRenameError(null)
     setRenameValue(node.name)
   }
 
-  const hasChildren = node.children.length > 0
-
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible open={isExpanded} onOpenChange={() => onToggleExpand(path)}>
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
             className={cn(
               'flex items-center gap-1.5 px-1.5 py-1 rounded-md cursor-pointer select-none text-sm group/item transition-colors',
-              isSelected
+              isSelected || isFocused
                 ? 'bg-accent border border-muted text-foreground font-bold shadow-sm'
                 : 'hover:bg-accent/50 hover:text-foreground text-foreground/80'
             )}
             data-path={pathStr}
             onClick={(e) => {
               e.stopPropagation()
+              onFocusChange(path)
               if (e.metaKey || e.ctrlKey) {
                 onSelect(isSelected ? selectedPaths.filter(p => p !== pathStr) : [...selectedPaths, pathStr])
               } else if (e.shiftKey && selectedPaths.length > 0) {
-                // Simplified range select could go here, but for now we broadcast the single select
                 onSelect([pathStr])
               } else {
                 onSelect([pathStr])
               }
             }}
-            onDoubleClick={() => setIsRenaming(true)}
+            onDoubleClick={() => onEditingChange(path)}
           >
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setIsOpen((o) => !o) }}
+              onClick={(e) => { e.stopPropagation(); onToggleExpand(path) }}
               className="flex-shrink-0 text-muted-foreground hover:text-foreground"
             >
               {hasChildren
-                ? isOpen
+                ? isExpanded
                   ? <ChevronDown className="w-3 h-3" />
                   : <ChevronRight className="w-3 h-3" />
                 : <span className="w-3 h-3 inline-block" />}
             </button>
-            {isOpen && hasChildren
+            {isExpanded && hasChildren
               ? <FolderOpenIcon className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
               : <FolderIcon className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />}
 
-            {isRenaming ? (
+            {isEditing ? (
               <div className="flex-1 flex flex-col">
                 <input
                   ref={inputRef}
@@ -162,20 +176,11 @@ function NodeItem({
               </div>
             ) : (
               <div className="flex items-center min-w-0">
-                <span className={cn("truncate", isSelected ? "font-bold" : "font-medium")}>
+                <span className={cn("truncate", isSelected || isFocused ? "font-bold" : "font-medium")}>
                   {node.name}
                 </span>
                 {isSelected && selectedPaths.length === 1 && (
                   <div className="flex items-center gap-2 ml-3 animate-in fade-in slide-in-from-left-1 duration-200">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 hover:bg-foreground/10"
-                      onClick={(e) => { e.stopPropagation(); onAddSiblingFolder(path) }}
-                      title="Add Sibling Folder"
-                    >
-                      <FolderPlusIcon className="w-3.5 h-3.5" />
-                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -189,7 +194,7 @@ function NodeItem({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 hover:bg-foreground/10"
-                      onClick={(e) => { e.stopPropagation(); setIsRenaming(true) }}
+                      onClick={(e) => { e.stopPropagation(); onEditingChange(path) }}
                       title="Rename"
                     >
                       <PencilIcon className="w-3.5 h-3.5" />
@@ -214,7 +219,7 @@ function NodeItem({
           <ContextMenuItem onClick={() => onAddSubfolder(path)}>
             Add Subfolder
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => setIsRenaming(true)}>
+          <ContextMenuItem onClick={() => onEditingChange(path)}>
             Rename
           </ContextMenuItem>
           <ContextMenuItem onClick={() => onDuplicate([pathStr])}>
@@ -232,21 +237,33 @@ function NodeItem({
 
       <CollapsibleContent>
         <div className="ml-4">
-          {node.children.map((child, i) => (
-            <NodeItem
-              key={`${i}-${child.name}`}
-              node={child}
-              path={[...path, i]}
-              selectedPaths={selectedPaths}
-              siblingNames={node.children.map(c => c.name).filter(n => n !== child.name)}
-              onSelect={onSelect}
-              onAddSubfolder={onAddSubfolder}
-              onAddSiblingFolder={onAddSiblingFolder}
-              onRename={onRename}
-              onDuplicate={onDuplicate}
-              onDelete={onDelete}
-            />
-          ))}
+          {node.children.map((child, i) => {
+            const childPath = [...path, i]
+            const childPathStr = childPath.join(',')
+            return (
+              <NodeItem
+                key={`${i}-${child.name}`}
+                node={child}
+                path={childPath}
+                selectedPaths={selectedPaths}
+                siblingNames={node.children.map(c => c.name).filter(n => n !== child.name)}
+                isFocused={focusedPath !== null && focusedPath.join(',') === childPathStr}
+                isEditing={editingPath !== null && editingPath.join(',') === childPathStr}
+                expandedPaths={expandedPaths}
+                focusedPath={focusedPath}
+                editingPath={editingPath}
+                onSelect={onSelect}
+                onFocusChange={onFocusChange}
+                onEditingChange={onEditingChange}
+                onToggleExpand={onToggleExpand}
+                onAddSubfolder={onAddSubfolder}
+                onAddSiblingAfter={onAddSiblingAfter}
+                onRename={onRename}
+                onDuplicate={onDuplicate}
+                onDelete={onDelete}
+              />
+            )
+          })}
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -254,8 +271,10 @@ function NodeItem({
 }
 
 export function FolderTree({
-  nodes, selectedPaths, onSelect,
-  onAddSubfolder, onAddSiblingFolder, onRename, onDuplicate, onDelete
+  nodes, selectedPaths, focusedPath, editingPath, expandedPaths,
+  onSelect, onFocusChange, onEditingChange, onToggleExpand,
+  onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete,
+  onIndent, onOutdent
 }: FolderTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
@@ -340,10 +359,138 @@ export function FolderTree({
     }
   }, [onSelect, selectedPaths])
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const isEditing = editingPath !== null
+
+    // Tab / Shift+Tab
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      if (focusedPath) {
+        if (e.shiftKey) {
+          onOutdent(focusedPath)
+        } else {
+          onIndent(focusedPath)
+        }
+      }
+      return
+    }
+
+    // Arrow keys
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!focusedPath) return
+      const visible = getVisiblePaths(nodes, expandedPaths)
+      const currentIdx = visible.findIndex(v => v.path.join(',') === focusedPath.join(','))
+      if (e.key === 'ArrowUp') {
+        if (currentIdx > 0) {
+          if (e.shiftKey) {
+            const prevPathStr = visible[currentIdx - 1].path.join(',')
+            if (!selectedPaths.includes(prevPathStr)) {
+              onSelect([...selectedPaths, prevPathStr])
+            }
+          }
+          onFocusChange(visible[currentIdx - 1].path)
+        }
+      } else {
+        if (currentIdx < visible.length - 1) {
+          if (e.shiftKey) {
+            const nextPathStr = visible[currentIdx + 1].path.join(',')
+            if (!selectedPaths.includes(nextPathStr)) {
+              onSelect([...selectedPaths, nextPathStr])
+            }
+          }
+          onFocusChange(visible[currentIdx + 1].path)
+        }
+      }
+      return
+    }
+
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      if (!focusedPath) return
+      const pathStr = focusedPath.join(',')
+      const node = getNodeAtPath(nodes, focusedPath)
+      const nodeHasChildren = node ? node.children.length > 0 : false
+      const isExpanded = expandedPaths.has(pathStr)
+      if (isExpanded && nodeHasChildren) {
+        onToggleExpand(focusedPath)
+      } else if (focusedPath.length > 1) {
+        onFocusChange(focusedPath.slice(0, -1))
+      }
+      return
+    }
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      if (!focusedPath) return
+      const pathStr = focusedPath.join(',')
+      const node = getNodeAtPath(nodes, focusedPath)
+      const nodeHasChildren = node ? node.children.length > 0 : false
+      const isExpanded = expandedPaths.has(pathStr)
+      if (!isExpanded && nodeHasChildren) {
+        onToggleExpand(focusedPath)
+      } else if (isExpanded && nodeHasChildren) {
+        onFocusChange([...focusedPath, 0])
+      }
+      // leaf: do nothing
+      return
+    }
+
+    // Enter
+    if (e.key === 'Enter') {
+      if (isEditing) {
+        // Commit rename (the input's onBlur will fire when focus leaves input)
+        onEditingChange(null)
+        const pathAtTime = focusedPath
+        setTimeout(() => {
+          if (pathAtTime) onAddSiblingAfter(pathAtTime)
+        }, 0)
+      } else {
+        if (focusedPath) onAddSiblingAfter(focusedPath)
+      }
+      return
+    }
+
+    // F2
+    if (e.key === 'F2') {
+      if (focusedPath) onEditingChange(focusedPath)
+      return
+    }
+
+    // Escape
+    if (e.key === 'Escape') {
+      if (isEditing) onEditingChange(null)
+      return
+    }
+
+    // Backspace / Delete (not editing)
+    if ((e.key === 'Backspace' || e.key === 'Delete') && !isEditing) {
+      if (selectedPaths.length > 0) {
+        onDelete(selectedPaths)
+      } else if (focusedPath) {
+        onDelete([focusedPath.join(',')])
+      }
+      return
+    }
+
+    // Cmd/Ctrl+D
+    if (e.key === 'd' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      if (selectedPaths.length > 0) {
+        onDuplicate(selectedPaths)
+      } else if (focusedPath) {
+        onDuplicate([focusedPath.join(',')])
+      }
+      return
+    }
+  }
+
   return (
-    <div 
-      ref={containerRef} 
-      className="relative h-full min-h-full select-none cursor-default"
+    <div
+      ref={containerRef}
+      className="relative h-full min-h-full select-none cursor-default outline-none focus:outline-none"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
     >
       {nodes.length === 0 ? (
         <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
@@ -351,21 +498,32 @@ export function FolderTree({
         </div>
       ) : (
         <div className="space-y-0.5">
-          {nodes.map((node, i) => (
-            <NodeItem
-              key={`${i}-${node.name}`}
-              node={node}
-              path={[i]}
-              selectedPaths={selectedPaths}
-              siblingNames={nodes.map(n => n.name).filter(n => n !== node.name)}
-              onSelect={onSelect}
-              onAddSubfolder={onAddSubfolder}
-              onAddSiblingFolder={onAddSiblingFolder}
-              onRename={onRename}
-              onDuplicate={onDuplicate}
-              onDelete={onDelete}
-            />
-          ))}
+          {nodes.map((node, i) => {
+            const rootPathStr = String(i)
+            return (
+              <NodeItem
+                key={`${i}-${node.name}`}
+                node={node}
+                path={[i]}
+                selectedPaths={selectedPaths}
+                siblingNames={nodes.map(n => n.name).filter(n => n !== node.name)}
+                isFocused={focusedPath !== null && focusedPath.join(',') === rootPathStr}
+                isEditing={editingPath !== null && editingPath.join(',') === rootPathStr}
+                expandedPaths={expandedPaths}
+                focusedPath={focusedPath}
+                editingPath={editingPath}
+                onSelect={onSelect}
+                onFocusChange={onFocusChange}
+                onEditingChange={onEditingChange}
+                onToggleExpand={onToggleExpand}
+                onAddSubfolder={onAddSubfolder}
+                onAddSiblingAfter={onAddSiblingAfter}
+                onRename={onRename}
+                onDuplicate={onDuplicate}
+                onDelete={onDelete}
+              />
+            )
+          })}
         </div>
       )}
 

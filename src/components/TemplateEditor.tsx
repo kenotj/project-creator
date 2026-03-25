@@ -8,7 +8,10 @@ import { FolderTree } from './FolderTree'
 import { GenerateDialog } from './GenerateDialog'
 import { validateName } from '@/lib/validation'
 import type { Template, FolderNode } from '@/lib/models'
-import { addNodeAt, renameNodeAt, deleteNodeAt, duplicateNodeAt } from '@/lib/tree-operations'
+import {
+  addNodeAt, renameNodeAt, deleteNodeAt, duplicateNodeAt,
+  insertNodeAfter, moveNode, indentNode, outdentNode
+} from '@/lib/tree-operations'
 import { cn } from '@/lib/utils'
 
 interface TemplateEditorProps {
@@ -21,6 +24,21 @@ interface TemplateEditorProps {
   onDirtyChange: (dirty: boolean) => void
 }
 
+function getAllPathStrings(nodes: FolderNode[]): Set<string> {
+  const result = new Set<string>()
+  function traverse(children: FolderNode[], parentPath: number[]) {
+    for (let i = 0; i < children.length; i++) {
+      const path = [...parentPath, i]
+      result.add(path.join(','))
+      if (children[i].children.length > 0) {
+        traverse(children[i].children, path)
+      }
+    }
+  }
+  traverse(nodes, [])
+  return result
+}
+
 export function TemplateEditor({
   template, templates, saveSignal,
   onSave, onDelete, onDuplicate, onDirtyChange
@@ -29,6 +47,9 @@ export function TemplateEditor({
   const [folders, setFolders] = useState<FolderNode[]>([])
   const [selectedPaths, setSelectedPaths] = useState<string[]>([])
   const [nameError, setNameError] = useState<string | null>(null)
+  const [focusedPath, setFocusedPath] = useState<number[] | null>(null)
+  const [editingPath, setEditingPath] = useState<number[] | null>(null)
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
 
   // Reset local state when selected template changes
   useEffect(() => {
@@ -37,6 +58,9 @@ export function TemplateEditor({
       setFolders(JSON.parse(JSON.stringify(template.folders)))
       setSelectedPaths([])
       setNameError(null)
+      setFocusedPath(null)
+      setEditingPath(null)
+      setExpandedPaths(getAllPathStrings(template.folders))
     }
   }, [template?.id])
 
@@ -70,11 +94,6 @@ export function TemplateEditor({
 
   const handleAddSubfolder = (path: number[]) => {
     setFolders((prev) => addNodeAt(prev, path, { name: 'New Folder', children: [] }))
-  }
-
-  const handleAddSiblingFolder = (path: number[]) => {
-    const parentPath = path.slice(0, -1)
-    setFolders((prev) => addNodeAt(prev, parentPath, { name: 'New Folder', children: [] }))
   }
 
   const handleRename = (path: number[], newName: string) => {
@@ -124,6 +143,50 @@ export function TemplateEditor({
     } else {
       setNameError(null)
     }
+  }
+
+  const handleMove = (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => {
+    setFolders((prev) => moveNode(prev, fromPath, toPath, position))
+  }
+
+  const handleIndent = (path: number[]) => {
+    const lastIdx = path[path.length - 1]
+    if (lastIdx === 0) return // can't indent first sibling
+    const precedingSiblingPath = [...path.slice(0, -1), lastIdx - 1]
+    setFolders((prev) => indentNode(prev, path))
+    // Auto-expand the new parent (preceding sibling becomes parent)
+    setExpandedPaths((prev) => {
+      const next = new Set(prev)
+      next.add(precedingSiblingPath.join(','))
+      return next
+    })
+    // Clear focused path — the node is now inside a different parent
+    setFocusedPath(null)
+  }
+
+  const handleOutdent = (path: number[]) => {
+    setFolders((prev) => outdentNode(prev, path))
+  }
+
+  const handleAddSiblingAfter = (path: number[]) => {
+    const newNode: FolderNode = { name: 'New Folder', children: [] }
+    setFolders((prev) => insertNodeAfter(prev, path, newNode))
+    const newPath = [...path.slice(0, -1), path[path.length - 1] + 1]
+    setFocusedPath(newPath)
+    setEditingPath(newPath)
+  }
+
+  const handleToggleExpand = (path: number[]) => {
+    const key = path.join(',')
+    setExpandedPaths((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
   }
 
   return (
@@ -180,12 +243,21 @@ export function TemplateEditor({
             <FolderTree
               nodes={folders}
               selectedPaths={selectedPaths}
+              focusedPath={focusedPath}
+              editingPath={editingPath}
+              expandedPaths={expandedPaths}
               onSelect={setSelectedPaths}
+              onFocusChange={setFocusedPath}
+              onEditingChange={setEditingPath}
+              onToggleExpand={handleToggleExpand}
               onAddSubfolder={handleAddSubfolder}
-              onAddSiblingFolder={handleAddSiblingFolder}
+              onAddSiblingAfter={handleAddSiblingAfter}
               onRename={handleRename}
               onDuplicate={handleDuplicateNodes}
               onDelete={handleDeleteNodes}
+              onMove={handleMove}
+              onIndent={handleIndent}
+              onOutdent={handleOutdent}
             />
           </div>
         ) : (
@@ -207,7 +279,7 @@ export function TemplateEditor({
         >
           <FolderPlusIcon className="w-3.5 h-3.5" />
         </Button>
-        
+
         {selectedPaths.length > 1 && (
           <div className="flex items-center gap-1.5 pl-3 ml-1.5 border-l border-border animate-in fade-in slide-in-from-left-1">
             <span className="text-xs font-medium text-muted-foreground mr-1">
