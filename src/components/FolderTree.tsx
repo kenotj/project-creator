@@ -4,7 +4,6 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  KeyboardSensor,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -14,17 +13,11 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
-  sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { FolderTreeRow } from './FolderTreeRow'
 import { FolderTreeDragOverlay } from './FolderTreeDragOverlay'
-import { getVisiblePaths, getNodeAtPath, getSiblingsAtPath } from '@/lib/tree-operations'
+import { getVisiblePaths, getNodeAtPath, getSiblingsAtPath, isAncestorOf } from '@/lib/tree-operations'
 import type { FolderNode } from '@/lib/models'
-
-function isAncestorOf(ancestor: number[], descendant: number[]): boolean {
-  return ancestor.length < descendant.length &&
-    ancestor.every((v, i) => v === descendant[i])
-}
 
 interface FolderTreeProps {
   nodes: FolderNode[]
@@ -61,13 +54,15 @@ export function FolderTree({
     path: number[]
     position: 'before' | 'after' | 'inside'
   } | null>(null)
+  const dropTargetRef = useRef<{ path: number[], position: 'before' | 'after' | 'inside' } | null>(null)
+  const dragStartPointerY = useRef<number>(0)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
   const handleDragStart = (event: DragStartEvent) => {
+    dragStartPointerY.current = (event.activatorEvent as PointerEvent).clientY
     setActiveDragId(event.active.id as string)
     // If currently editing, commit rename first
     if (editingPath !== null) {
@@ -79,6 +74,7 @@ export function FolderTree({
     const { active, over } = event
     if (!over || active.id === over.id) {
       setDropTarget(null)
+      dropTargetRef.current = null
       return
     }
 
@@ -88,13 +84,12 @@ export function FolderTree({
     // Prevent dropping on self or descendants
     if (isAncestorOf(activePath, overPath)) {
       setDropTarget(null)
+      dropTargetRef.current = null
       return
     }
 
-    // Get pointer position from the native event + delta
-    const nativeEvent = event.activatorEvent as PointerEvent
-    const startY = nativeEvent.clientY
-    const currentY = startY + event.delta.y
+    // Get pointer position from the ref (captured at drag start) + delta
+    const currentY = dragStartPointerY.current + event.delta.y
 
     const overRect = over.rect
     const relY = currentY - overRect.top
@@ -109,30 +104,32 @@ export function FolderTree({
       position = 'inside'
     }
 
-    setDropTarget({ path: overPath, position })
+    const newDropTarget = { path: overPath, position }
+    setDropTarget(newDropTarget)
+    dropTargetRef.current = newDropTarget
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveDragId(null)
 
-    if (!over || !dropTarget) {
+    const currentDropTarget = dropTargetRef.current  // use ref, not state
+    if (!over || !currentDropTarget) {
       setDropTarget(null)
+      dropTargetRef.current = null
       return
     }
 
     const fromPath = (active.id as string).split(',').map(Number)
-    onMove(fromPath, dropTarget.path, dropTarget.position)
+    onMove(fromPath, currentDropTarget.path, currentDropTarget.position)
 
     // Auto-expand if dropped inside a collapsed folder
-    if (dropTarget.position === 'inside') {
-      const targetKey = dropTarget.path.join(',')
-      if (!expandedPaths.has(targetKey)) {
-        onToggleExpand(dropTarget.path)
-      }
+    if (currentDropTarget.position === 'inside' && !expandedPaths.has(currentDropTarget.path.join(','))) {
+      onToggleExpand(currentDropTarget.path)
     }
 
     setDropTarget(null)
+    dropTargetRef.current = null
   }
 
   useEffect(() => {
@@ -140,6 +137,7 @@ export function FolderTree({
 
     const handleMouseDown = (e: MouseEvent) => {
       // Only start marquee if clicking empty area or container itself
+      if (activeDragId !== null) return
       if (e.button !== 0) return
       const target = e.target as HTMLElement
       if (target.closest('button') || target.closest('input') || target.closest('[data-drag-handle]')) return
@@ -213,7 +211,7 @@ export function FolderTree({
       container.addEventListener('mousedown', handleMouseDown)
       return () => container.removeEventListener('mousedown', handleMouseDown)
     }
-  }, [onSelect, selectedPaths])
+  }, [onSelect, selectedPaths, activeDragId])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // While renaming, let the input handle all keys except Escape (cancel)
@@ -375,8 +373,8 @@ export function FolderTree({
                     {dropTarget?.position === 'before' &&
                      dropTarget.path.join(',') === pathStr && (
                       <div
-                        className="h-0.5 bg-primary rounded-full mx-2"
-                        style={{ marginLeft: `${depth * 24 + 8}px` }}
+                        className="h-0.5 bg-primary rounded-full"
+                        style={{ marginLeft: `${depth * 24 + 8}px`, marginRight: '8px' }}
                       />
                     )}
 
@@ -410,7 +408,9 @@ export function FolderTree({
                       }}
                       onFocusChange={onFocusChange}
                       onEditingChange={onEditingChange}
-                      onToggleExpand={onToggleExpand}
+                      onToggleExpand={(path) => {
+                        if (activeDragId === null) onToggleExpand(path)
+                      }}
                       onAddSubfolder={onAddSubfolder}
                       onRename={onRename}
                       onDuplicate={onDuplicate}
@@ -421,8 +421,8 @@ export function FolderTree({
                     {dropTarget?.position === 'after' &&
                      dropTarget.path.join(',') === pathStr && (
                       <div
-                        className="h-0.5 bg-primary rounded-full mx-2"
-                        style={{ marginLeft: `${depth * 24 + 8}px` }}
+                        className="h-0.5 bg-primary rounded-full"
+                        style={{ marginLeft: `${depth * 24 + 8}px`, marginRight: '8px' }}
                       />
                     )}
                   </Fragment>

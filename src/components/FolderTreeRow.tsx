@@ -163,15 +163,12 @@ export function FolderTreeRow({
         >
           {/* Left gutter: chevron / grip swap */}
           {hasChildren ? (
-            <div
-              className="relative w-5 h-full flex-shrink-0"
-              {...listeners}
-              data-drag-handle
-            >
-              {/* Chevron - default visible, hidden on row hover */}
+            <div className="relative w-5 h-full flex-shrink-0">
+              {/* Chevron - NOT in the listeners div */}
               <button
                 type="button"
                 className="absolute inset-0 flex items-center justify-center opacity-100 group-hover/row:opacity-0 transition-opacity text-muted-foreground hover:text-foreground"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation()
                   onToggleExpand(path)
@@ -183,8 +180,12 @@ export function FolderTreeRow({
                   <ChevronRight className="w-3.5 h-3.5" />
                 )}
               </button>
-              {/* Grip - default hidden, shown on row hover */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab">
+              {/* Grip - listeners go HERE only */}
+              <div
+                {...listeners}
+                data-drag-handle
+                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab"
+              >
                 <GripVertical className="w-3 h-3 text-muted-foreground" />
               </div>
             </div>

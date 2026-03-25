@@ -96,7 +96,7 @@ export function insertNodeAfter(
   )
 }
 
-function isAncestorOf(ancestor: number[], descendant: number[]): boolean {
+export function isAncestorOf(ancestor: number[], descendant: number[]): boolean {
   return ancestor.length < descendant.length &&
     ancestor.every((v, i) => v === descendant[i])
 }
