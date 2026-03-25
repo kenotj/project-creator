@@ -1,7 +1,6 @@
 // tests/store.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { readTextFile, writeTextFile, mkdir, exists } from '@tauri-apps/plugin-fs'
-import { homeDir } from '@tauri-apps/api/path'
 import {
   loadTemplates,
   saveTemplates,

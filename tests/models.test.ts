@@ -4,7 +4,6 @@ import {
   folderNodeToDict,
   folderNodeFromDict,
   type FolderNode,
-  type Template,
 } from '@/lib/models'
 
 describe('FolderNode serialization', () => {

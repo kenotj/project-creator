@@ -24,7 +24,7 @@ export async function loadTemplates(): Promise<Template[]> {
     const templates = raw.map(templateFromDict)
 
     // Legacy migration: assign IDs to records that were missing them
-    const needsMigration = templates.some((t, i) => !(raw[i] as Record<string, unknown>).id)
+    const needsMigration = templates.some((_t, i) => !(raw[i] as Record<string, unknown>).id)
     if (needsMigration) {
       await saveTemplates(templates)
     }
