@@ -21,7 +21,8 @@ interface TemplateEditorProps {
   onSave: (t: Template) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
-  onDirtyChange: (dirty: boolean) => void
+  onWorkingStateChange: (id: string, name: string, folders: FolderNode[]) => void
+  workingCopy?: { name: string; folders: FolderNode[] }
 }
 
 function getAllPathStrings(nodes: FolderNode[]): Set<string> {
@@ -41,7 +42,7 @@ function getAllPathStrings(nodes: FolderNode[]): Set<string> {
 
 export function TemplateEditor({
   template, templates, saveSignal,
-  onSave, onDelete, onDuplicate, onDirtyChange
+  onSave, onDelete, onDuplicate, onWorkingStateChange, workingCopy
 }: TemplateEditorProps) {
   const [name, setName] = useState('')
   const [folders, setFolders] = useState<FolderNode[]>([])
@@ -54,15 +55,18 @@ export function TemplateEditor({
   // Reset local state when selected template changes
   useEffect(() => {
     if (template) {
-      setName(template.name)
-      setFolders(JSON.parse(JSON.stringify(template.folders)))
+      setName(workingCopy?.name ?? template.name)
+      setFolders(workingCopy?.folders
+        ? JSON.parse(JSON.stringify(workingCopy.folders))
+        : JSON.parse(JSON.stringify(template.folders))
+      )
       setSelectedPaths([])
       setNameError(null)
       setFocusedPath(null)
       setEditingPath(null)
-      setExpandedPaths(getAllPathStrings(template.folders))
+      setExpandedPaths(getAllPathStrings(workingCopy?.folders ?? template.folders))
     }
-  }, [template?.id])
+  }, [template?.id]) // workingCopy intentionally excluded — read at load time only
 
   // Compute dirty state
   const isDirty = template
@@ -70,8 +74,9 @@ export function TemplateEditor({
     : false
 
   useEffect(() => {
-    onDirtyChange(isDirty)
-  }, [isDirty, onDirtyChange])
+    if (!template) return
+    onWorkingStateChange(template.id, name, folders)
+  }, [name, folders]) // template.id captured at effect-run time via closure
 
   // Name conflict check
   const nameConflict = templates.some((t) => t.name === name && t.id !== template?.id)
