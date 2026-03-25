@@ -1,6 +1,6 @@
 // src/components/TemplateEditor.tsx
 import { useState, useEffect, useCallback } from 'react'
-import { PlusIcon, CopyIcon, Trash2Icon, SaveIcon } from 'lucide-react'
+import { CopyIcon, Trash2Icon, SaveIcon, FolderPlusIcon } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { ScrollArea } from './ui/scroll-area'
@@ -16,9 +16,11 @@ function addNodeAt(nodes: FolderNode[], path: number[], newNode: FolderNode): Fo
   if (path.length === 0) return [...nodes, newNode]
   return nodes.map((n, i) =>
     i === path[0]
-      ? { ...n, children: path.length === 1
+      ? {
+        ...n, children: path.length === 1
           ? [...n.children, newNode]
-          : addNodeAt(n.children, path.slice(1), newNode) }
+          : addNodeAt(n.children, path.slice(1), newNode)
+      }
       : n
   )
 }
@@ -77,7 +79,7 @@ export function TemplateEditor({
 }: TemplateEditorProps) {
   const [name, setName] = useState('')
   const [folders, setFolders] = useState<FolderNode[]>([])
-  const [selectedPath, setSelectedPath] = useState<number[] | null>(null)
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([])
   const [nameError, setNameError] = useState<string | null>(null)
 
   // Reset local state when selected template changes
@@ -85,7 +87,7 @@ export function TemplateEditor({
     if (template) {
       setName(template.name)
       setFolders(JSON.parse(JSON.stringify(template.folders)))
-      setSelectedPath(null)
+      setSelectedPaths([])
       setNameError(null)
     }
   }, [template?.id])
@@ -122,17 +124,46 @@ export function TemplateEditor({
     setFolders((prev) => addNodeAt(prev, path, { name: 'New Folder', children: [] }))
   }
 
+  const handleAddSiblingFolder = (path: number[]) => {
+    const parentPath = path.slice(0, -1)
+    setFolders((prev) => addNodeAt(prev, parentPath, { name: 'New Folder', children: [] }))
+  }
+
   const handleRename = (path: number[], newName: string) => {
     setFolders((prev) => renameNodeAt(prev, path, newName))
   }
 
-  const handleDuplicateNode = (path: number[]) => {
-    setFolders((prev) => duplicateNodeAt(prev, path))
+  const handleDuplicateNodes = (paths: string[]) => {
+    // Sort paths to avoid indexing issues during mutation
+    const sortedPaths = [...paths].map(p => p.split(',').map(Number)).sort((a, b) => {
+      if (a.length !== b.length) return b.length - a.length // deeper first
+      return b[b.length - 1] - a[a.length - 1] // higher index first
+    })
+
+    setFolders((prev) => {
+      let current = [...prev]
+      for (const path of sortedPaths) {
+        current = duplicateNodeAt(current, path)
+      }
+      return current
+    })
   }
 
-  const handleDeleteNode = (path: number[]) => {
-    setFolders((prev) => deleteNodeAt(prev, path))
-    setSelectedPath(null)
+  const handleDeleteNodes = (paths: string[]) => {
+    // Sort paths: deeper first to avoid invalidating parent indices
+    const sortedPaths = [...paths].map(p => p.split(',').map(Number)).sort((a, b) => {
+      if (a.length !== b.length) return b.length - a.length
+      return b[b.length - 1] - a[a.length - 1]
+    })
+
+    setFolders((prev) => {
+      let current = [...prev]
+      for (const path of sortedPaths) {
+        current = deleteNodeAt(current, path)
+      }
+      return current
+    })
+    setSelectedPaths([])
   }
 
   const handleNameChange = (val: string) => {
@@ -160,46 +191,57 @@ export function TemplateEditor({
             />
             {nameError && <span className="text-xs text-red-500 mt-0.5">{nameError}</span>}
           </div>
+          <div className="flex items-center gap-1 ml-1 animate-in fade-in slide-in-from-left-1 duration-200">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onDuplicate(template.id)}
+              title="Duplicate"
+            >
+              <CopyIcon className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950"
+              onClick={() => onDelete(template.id)}
+              title="Delete"
+            >
+              <Trash2Icon className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleSave}
+              disabled={!canSave}
+              title="Save"
+            >
+              <SaveIcon className="w-3.5 h-3.5" />
+            </Button>
+          </div>
           <div className="flex-1" />
-          <Button variant="outline" size="sm" onClick={() => onDuplicate(template.id)}>
-            <CopyIcon className="w-3.5 h-3.5 mr-1.5" />
-            Duplicate
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950"
-            onClick={() => onDelete(template.id)}
-          >
-            <Trash2Icon className="w-3.5 h-3.5 mr-1.5" />
-            Delete
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSave}
-            disabled={!canSave}
-          >
-            <SaveIcon className="w-3.5 h-3.5 mr-1.5" />
-            Save
-          </Button>
         </div>
       )}
 
       {/* Tree area */}
       <ScrollArea className="flex-1 px-3 py-2">
         {template ? (
-          <FolderTree
-            nodes={folders}
-            selectedPath={selectedPath}
-            onSelect={setSelectedPath}
-            onAddSubfolder={handleAddSubfolder}
-            onRename={handleRename}
-            onDuplicate={handleDuplicateNode}
-            onDelete={handleDeleteNode}
-          />
+          <div className="h-full min-h-full select-none">
+            <FolderTree
+              nodes={folders}
+              selectedPaths={selectedPaths}
+              onSelect={setSelectedPaths}
+              onAddSubfolder={handleAddSubfolder}
+              onAddSiblingFolder={handleAddSiblingFolder}
+              onRename={handleRename}
+              onDuplicate={handleDuplicateNodes}
+              onDelete={handleDeleteNodes}
+            />
+          </div>
         ) : (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground pt-8">
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground pt-8 select-none">
             Select or create a template to get started.
           </div>
         )}
@@ -207,40 +249,43 @@ export function TemplateEditor({
 
       {/* Action bar — always rendered, buttons disabled when no template */}
       <div className="flex items-center gap-1.5 px-3 py-2 border-t border-border">
-        <Button variant="outline" size="sm" onClick={handleAddFolder} disabled={!template}>
-          <PlusIcon className="w-3 h-3 mr-1" />
-          Folder
-        </Button>
         <Button
           variant="outline"
-          size="sm"
-          disabled={!template || !selectedPath}
-          onClick={() => selectedPath && handleAddSubfolder(selectedPath)}
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleAddFolder}
+          disabled={!template}
+          title="New Folder"
         >
-          <PlusIcon className="w-3 h-3 mr-1" />
-          Subfolder
+          <FolderPlusIcon className="w-3.5 h-3.5" />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!template || !selectedPath}
-          onClick={() => {
-            if (selectedPath) {
-              window.dispatchEvent(new CustomEvent('rename-node', { detail: selectedPath }))
-            }
-          }}
-        >
-          Rename
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!template || !selectedPath}
-          className="text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950"
-          onClick={() => selectedPath && handleDeleteNode(selectedPath)}
-        >
-          Remove
-        </Button>
+        
+        {selectedPaths.length > 1 && (
+          <div className="flex items-center gap-1.5 pl-3 ml-1.5 border-l border-border animate-in fade-in slide-in-from-left-1">
+            <span className="text-xs font-medium text-muted-foreground mr-1">
+              {selectedPaths.length} selected
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handleDuplicateNodes(selectedPaths)}
+              title="Duplicate Selected"
+            >
+              <CopyIcon className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950"
+              onClick={() => handleDeleteNodes(selectedPaths)}
+              title="Delete Selected"
+            >
+              <Trash2Icon className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        )}
+
         <div className="flex-1" />
         {template ? (
           <GenerateProjectButton template={{ ...template, name, folders }} />

@@ -43,19 +43,19 @@ export function TemplateList({
               className={cn(
                 'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-colors',
                 t.id === selectedId
-                  ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-semibold'
+                  ? 'bg-accent border border-muted text-foreground font-bold shadow-sm'
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               )}
             >
               <FolderIcon
                 className={cn(
                   'w-3.5 h-3.5 flex-shrink-0',
-                  t.id === selectedId ? 'text-blue-500' : 'text-muted-foreground/50'
+                  t.id === selectedId ? 'text-foreground' : 'text-muted-foreground/50'
                 )}
               />
-              <span className="flex-1 truncate">{t.name}</span>
+              <span className={cn("flex-1 truncate", t.id === selectedId && "font-bold text-foreground")}>{t.name}</span>
               {t.id === selectedId && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-foreground flex-shrink-0" />
               )}
             </button>
           ))}
