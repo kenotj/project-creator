@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 interface TemplateListProps {
   templates: Template[]
   selectedId: string | null
+  dirtyIds?: Set<string>
   isDark: boolean
   onSelect: (id: string) => void
   onNew: () => void
@@ -18,6 +19,7 @@ interface TemplateListProps {
 export function TemplateList({
   templates,
   selectedId,
+  dirtyIds = new Set<string>(),
   isDark,
   onSelect,
   onNew,
@@ -54,8 +56,11 @@ export function TemplateList({
                 )}
               />
               <span className={cn("flex-1 truncate", t.id === selectedId && "font-bold text-foreground")}>{t.name}</span>
-              {t.id === selectedId && (
-                <span className="w-1.5 h-1.5 rounded-full bg-foreground flex-shrink-0" />
+              {(t.id === selectedId || dirtyIds.has(t.id)) && (
+                <span className={cn(
+                  'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                  dirtyIds.has(t.id) ? 'bg-amber-400' : 'bg-foreground'
+                )} />
               )}
             </button>
           ))}
