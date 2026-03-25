@@ -47,9 +47,7 @@ export function GenerateDialog({ template, open: isOpen, onClose }: GenerateDial
     try {
       const result = await createProject(template, projectName.trim(), destination)
       toast.success('Project created', { description: result.path })
-      onClose()
-      setProjectName('')
-      setDestination('')
+      handleClose()
     } catch (err: unknown) {
       const e = err as { code: string; message?: string }
       if (e.code === 'EXISTS') {
@@ -62,8 +60,16 @@ export function GenerateDialog({ template, open: isOpen, onClose }: GenerateDial
     }
   }
 
+  const handleClose = () => {
+    onClose()
+    setProjectName('')
+    setDestination('')
+    setProjectNameError(null)
+    setDestError(null)
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) onClose() }}>
+    <Dialog open={isOpen} onOpenChange={(o) => { if (!o) handleClose() }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create Project</DialogTitle>
@@ -106,7 +112,7 @@ export function GenerateDialog({ template, open: isOpen, onClose }: GenerateDial
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
           <Button type="button" onClick={handleCreate} disabled={!canCreate}>
             {isCreating ? 'Creating...' : 'Create'}
           </Button>
