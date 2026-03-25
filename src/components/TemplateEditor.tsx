@@ -5,6 +5,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { ScrollArea } from './ui/scroll-area'
 import { FolderTree } from './FolderTree'
+import { GenerateDialog } from './GenerateDialog'
 import { validateName } from '@/lib/validation'
 import type { Template, FolderNode } from '@/lib/models'
 import { cn } from '@/lib/utils'
@@ -102,7 +103,7 @@ export function TemplateEditor({
   // Respond to Cmd+S signal from App
   useEffect(() => {
     if (saveSignal > 0) handleSave()
-  }, [saveSignal])
+  }, [saveSignal, handleSave])
 
   const handleAddFolder = () => {
     setFolders((prev) => [...prev, { name: 'New Folder', children: [] }])
@@ -237,9 +238,6 @@ export function TemplateEditor({
     </div>
   )
 }
-
-// Inline import to avoid circular dependency
-import { GenerateDialog } from './GenerateDialog'
 
 function GenerateProjectButton({ template }: { template: Template }) {
   const [open, setOpen] = useState(false)
