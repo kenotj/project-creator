@@ -1,0 +1,17 @@
+*.md
+*.pyc
+__pycache__/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Tauri
+src-tauri/target/
+
+# Editor
+.DS_Store
+.vscode/
+.idea/
