@@ -47,6 +47,7 @@ function NodeItem({
   const [renameValue, setRenameValue] = useState(node.name)
   const [renameError, setRenameError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const escapePressedRef = useRef(false)
   const isSelected = pathsEqual(selectedPath, path)
 
   useEffect(() => {
@@ -68,6 +69,10 @@ function NodeItem({
   }, [path])
 
   const commitRename = () => {
+    if (escapePressedRef.current) {
+      escapePressedRef.current = false
+      return
+    }
     const result = validateName(renameValue)
     if (!result.valid) {
       setRenameError(result.error ?? 'Invalid name')
@@ -79,6 +84,7 @@ function NodeItem({
   }
 
   const cancelRename = () => {
+    escapePressedRef.current = true
     setIsRenaming(false)
     setRenameError(null)
     setRenameValue(node.name)
@@ -165,7 +171,7 @@ function NodeItem({
         <div className="ml-4">
           {node.children.map((child, i) => (
             <NodeItem
-              key={i}
+              key={child.name}
               node={child}
               path={[...path, i]}
               selectedPath={selectedPath}
@@ -197,7 +203,7 @@ export function FolderTree({
     <div className="space-y-0.5">
       {nodes.map((node, i) => (
         <NodeItem
-          key={i}
+          key={node.name}
           node={node}
           path={[i]}
           selectedPath={selectedPath}
