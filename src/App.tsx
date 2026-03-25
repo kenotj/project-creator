@@ -1,6 +1,7 @@
 // src/App.tsx
 import { useEffect, useState, useCallback } from 'react'
 import { AppLayout } from './components/AppLayout'
+import { TemplateList } from './components/TemplateList'
 import {
   loadTemplates,
   saveTemplates,
@@ -118,10 +119,7 @@ export default function App() {
 
   const selected = templates.find((t) => t.id === selectedId) ?? null
 
-  // TODO (Tasks 8–10): wire these props into TemplateList and TemplateEditor
-  void setIsDark
-  void handleSelectTemplate
-  void handleNewTemplate
+  // TODO (Tasks 10–11): wire these props into TemplateEditor
   void handleSave
   void handleDelete
   void handleDuplicate
@@ -131,10 +129,14 @@ export default function App() {
     <>
       <AppLayout
         sidebar={
-          // TODO: Replace with <TemplateList> in Task 8
-          <div className="p-4 text-sm text-muted-foreground">
-            Sidebar placeholder — {templates.length} templates
-          </div>
+          <TemplateList
+            templates={templates}
+            selectedId={selectedId}
+            isDark={isDark}
+            onSelect={handleSelectTemplate}
+            onNew={handleNewTemplate}
+            onToggleTheme={() => setIsDark((d) => !d)}
+          />
         }
         editor={
           // TODO: Replace with <TemplateEditor> in Task 10

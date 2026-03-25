@@ -1,0 +1,74 @@
+// src/components/TemplateList.tsx
+import { FolderIcon, PlusIcon } from 'lucide-react'
+import { Button } from './ui/button'
+import { ScrollArea } from './ui/scroll-area'
+import { ThemeToggle } from './ThemeToggle'
+import type { Template } from '@/lib/models'
+import { cn } from '@/lib/utils'
+
+interface TemplateListProps {
+  templates: Template[]
+  selectedId: string | null
+  isDark: boolean
+  onSelect: (id: string) => void
+  onNew: () => void
+  onToggleTheme: () => void
+}
+
+export function TemplateList({
+  templates,
+  selectedId,
+  isDark,
+  onSelect,
+  onNew,
+  onToggleTheme,
+}: TemplateListProps) {
+  return (
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Templates
+        </span>
+        <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
+      </div>
+
+      {/* List */}
+      <ScrollArea className="flex-1">
+        <div className="p-1.5 space-y-0.5">
+          {templates.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => onSelect(t.id)}
+              className={cn(
+                'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-colors',
+                t.id === selectedId
+                  ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-semibold'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <FolderIcon
+                className={cn(
+                  'w-3.5 h-3.5 flex-shrink-0',
+                  t.id === selectedId ? 'text-blue-500' : 'text-muted-foreground/50'
+                )}
+              />
+              <span className="flex-1 truncate">{t.name}</span>
+              {t.id === selectedId && (
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+      </ScrollArea>
+
+      {/* Footer */}
+      <div className="p-2 border-t border-border">
+        <Button variant="outline" size="sm" className="w-full" onClick={onNew}>
+          <PlusIcon className="w-3 h-3 mr-1.5" />
+          New Template
+        </Button>
+      </div>
+    </>
+  )
+}
