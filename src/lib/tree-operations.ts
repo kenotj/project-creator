@@ -96,6 +96,11 @@ export function insertNodeAfter(
   )
 }
 
+function isAncestorOf(ancestor: number[], descendant: number[]): boolean {
+  return ancestor.length < descendant.length &&
+    ancestor.every((v, i) => v === descendant[i])
+}
+
 /**
  * Move the node at `fromPath` to a position relative to the node at `toPath`.
  * `position` is 'before', 'after', or 'inside' (appended as last child of toPath node).
@@ -110,18 +115,29 @@ export function moveNode(
   const nodeToMove = getNodeAtPath(nodes, fromPath)
   if (!nodeToMove) return nodes
 
+  // Guard: moving a node into one of its own descendants is undefined — bail out
+  if (isAncestorOf(fromPath, toPath)) return nodes
+
   // Remove the node from its current location
   let result = deleteNodeAt(nodes, fromPath)
 
-  // Adjust toPath if fromPath and toPath share the same parent and toPath's
-  // last index is after fromPath's last index (removal shifted indices down)
+  // Adjust toPath to account for the index shift caused by the removal of fromPath.
+  // Find the deepest level d where fromPath and toPath share the same parent prefix.
+  // At that level, if fromPath[d] < toPath[d], the removal shifted toPath[d] down by 1.
   const adjustedToPath = [...toPath]
-  if (
-    fromPath.length === toPath.length &&
-    fromPath.slice(0, -1).join(',') === toPath.slice(0, -1).join(',') &&
-    toPath[toPath.length - 1] > fromPath[fromPath.length - 1]
-  ) {
-    adjustedToPath[adjustedToPath.length - 1] -= 1
+  const sharedDepth = Math.min(fromPath.length, toPath.length)
+  for (let d = 0; d < sharedDepth; d++) {
+    // Check that the two paths share the same parent at depth d
+    // (i.e., fromPath[0..d-1] === toPath[0..d-1])
+    const samePrefix = fromPath.slice(0, d).every((v, i) => v === toPath[i])
+    if (!samePrefix) break
+    if (d === fromPath.length - 1) {
+      // This is the level where the deletion happened
+      if (fromPath[d] < toPath[d]) {
+        adjustedToPath[d] -= 1
+      }
+      break
+    }
   }
 
   if (position === 'inside') {
