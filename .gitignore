@@ -14,3 +14,9 @@ src-tauri/target/
 .DS_Store
 .vscode/
 .idea/
+
+# Worktrees
+.worktrees/
+
+# Superpowers
+.superpowers/
