@@ -1,9 +1,12 @@
 // src/App.tsx
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { toast } from 'sonner'
 import { AppLayout } from './components/AppLayout'
 import { TemplateList } from './components/TemplateList'
 import { TemplateEditor } from './components/TemplateEditor'
 import { NewTemplateDialog } from './components/NewTemplateDialog'
+import { UnsavedChangesDialog } from './components/UnsavedChangesDialog'
 import {
   loadTemplates,
   saveTemplates,
@@ -13,7 +16,7 @@ import {
   duplicateTemplate,
   uniqueTemplateName,
 } from './lib/store'
-import type { Template } from './lib/models'
+import type { Template, FolderNode } from './lib/models'
 import { Toaster } from './components/ui/sonner'
 
 function getInitialTheme(): boolean {
@@ -25,8 +28,13 @@ function getInitialTheme(): boolean {
 export default function App() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [isDirty, setIsDirty] = useState(false)
+  const [workingCopies, setWorkingCopies] = useState<Record<string, { name: string; folders: FolderNode[] }>>({})
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false)
   const [isDark, setIsDark] = useState(getInitialTheme)
+
+  const workingCopiesRef = useRef(workingCopies)
+  useEffect(() => { workingCopiesRef.current = workingCopies }, [workingCopies])
+  const isClosingRef = useRef(false)
 
   // Apply theme class to root
   useEffect(() => {
@@ -42,78 +50,6 @@ export default function App() {
     })
   }, [])
 
-  const confirmDiscard = useCallback((): boolean => {
-    if (!isDirty) return true
-    return window.confirm('You have unsaved changes. Discard them?')
-  }, [isDirty])
-
-  const handleSelectTemplate = useCallback(
-    (id: string) => {
-      if (id === selectedId) return
-      if (!confirmDiscard()) return
-      setSelectedId(id)
-      setIsDirty(false)
-    },
-    [selectedId, confirmDiscard]
-  )
-
-  const [newDialogOpen, setNewDialogOpen] = useState(false)
-  const [newDialogDefault, setNewDialogDefault] = useState('')
-
-  const handleNewTemplate = useCallback(() => {
-    if (!confirmDiscard()) return
-    setNewDialogDefault(uniqueTemplateName(templates, 'New Template'))
-    setNewDialogOpen(true)
-  }, [templates, confirmDiscard])
-
-  const handleNewTemplateConfirm = useCallback((name: string) => {
-    setNewDialogOpen(false)
-    const updated = addTemplate(templates, name)
-    setTemplates(updated)
-    setSelectedId(updated[updated.length - 1].id)
-    setIsDirty(false)
-    saveTemplates(updated)
-  }, [templates])
-
-  const handleSave = useCallback(
-    (updated: Template) => {
-      const next = updateTemplate(templates, updated)
-      setTemplates(next)
-      setIsDirty(false)
-      saveTemplates(next)
-    },
-    [templates]
-  )
-
-  const handleDelete = useCallback(
-    (id: string) => {
-      if (!confirmDiscard()) return
-      const next = deleteTemplate(templates, id)
-      setTemplates(next)
-      setIsDirty(false)
-      saveTemplates(next)
-      const idx = templates.findIndex((t) => t.id === id)
-      if (next.length === 0) {
-        setSelectedId(null)
-      } else {
-        const newIdx = Math.min(idx, next.length - 1)
-        setSelectedId(next[newIdx].id)
-      }
-    },
-    [templates, confirmDiscard]
-  )
-
-  const handleDuplicate = useCallback(
-    (id: string) => {
-      const copy = duplicateTemplate(templates, id)
-      if (!copy) return
-      const next = [...templates, copy]
-      setTemplates(next)
-      saveTemplates(next)
-    },
-    [templates]
-  )
-
   // Cmd/Ctrl+S shortcut — signal to TemplateEditor to save
   const [saveSignal, setSaveSignal] = useState(0)
   useEffect(() => {
@@ -127,7 +63,157 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  // Register Tauri close-requested listener
+  useEffect(() => {
+    let unlisten: (() => void) | undefined
+    let mounted = true
+    getCurrentWindow().onCloseRequested((event) => {
+      if (isClosingRef.current) return          // already handling close
+      if (Object.keys(workingCopiesRef.current).length > 0) {
+        event.preventDefault()
+        setCloseDialogOpen(true)
+      }
+    }).then((fn) => {
+      if (mounted) { unlisten = fn } else { fn() }
+    })
+    return () => {
+      mounted = false
+      unlisten?.()
+    }
+  }, [])
+
+  const handleSelectTemplate = useCallback(
+    (id: string) => {
+      if (id === selectedId) return
+      setSelectedId(id)
+    },
+    [selectedId]
+  )
+
+  const [newDialogOpen, setNewDialogOpen] = useState(false)
+  const [newDialogDefault, setNewDialogDefault] = useState('')
+
+  const handleNewTemplate = useCallback(() => {
+    setNewDialogDefault(uniqueTemplateName(templates, 'New Template'))
+    setNewDialogOpen(true)
+  }, [templates])
+
+  const handleNewTemplateConfirm = useCallback((name: string) => {
+    setNewDialogOpen(false)
+    const updated = addTemplate(templates, name)
+    setTemplates(updated)
+    setSelectedId(updated[updated.length - 1].id)
+    saveTemplates(updated)
+  }, [templates])
+
+  const persistTemplate = useCallback(async (merged: Template) => {
+    const next = updateTemplate(templates, merged)
+    setTemplates(next)
+    setWorkingCopies(prev => {
+      const copy = { ...prev }
+      delete copy[merged.id]
+      return copy
+    })
+    await saveTemplates(next)
+  }, [templates])
+
+  const handleSave = useCallback((updated: Template) => {
+    persistTemplate(updated).catch(() => {
+      toast.error('Failed to save template')
+    })
+  }, [persistTemplate])
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      setWorkingCopies(prev => {
+        const copy = { ...prev }
+        delete copy[id]
+        return copy
+      })
+      const next = deleteTemplate(templates, id)
+      setTemplates(next)
+      saveTemplates(next)
+      const idx = templates.findIndex((t) => t.id === id)
+      if (next.length === 0) {
+        setSelectedId(null)
+      } else {
+        const newIdx = Math.min(idx, next.length - 1)
+        setSelectedId(next[newIdx].id)
+      }
+    },
+    [templates]
+  )
+
+  const handleDuplicate = useCallback(
+    (id: string) => {
+      const copy = duplicateTemplate(templates, id)
+      if (!copy) return
+      const next = [...templates, copy]
+      setTemplates(next)
+      saveTemplates(next)
+    },
+    [templates]
+  )
+
+  const handleWorkingStateChange = useCallback(
+    (id: string, name: string, folders: FolderNode[]) => {
+      const saved = templates.find(t => t.id === id)
+      if (!saved) return
+      if (name === saved.name && JSON.stringify(folders) === JSON.stringify(saved.folders)) {
+        setWorkingCopies(prev => {
+          const copy = { ...prev }
+          delete copy[id]
+          return copy
+        })
+      } else {
+        setWorkingCopies(prev => ({ ...prev, [id]: { name, folders } }))
+      }
+    },
+    [templates]
+  )
+
+  const handleSaveSelectedAndClose = useCallback(
+    async (ids: string[]) => {
+      let next = [...templates]
+      for (const id of ids) {
+        const wc = workingCopies[id]
+        const saved = next.find(t => t.id === id)
+        if (!wc || !saved) continue
+        next = updateTemplate(next, { ...saved, name: wc.name, folders: wc.folders })
+      }
+      setTemplates(next)
+      setWorkingCopies(prev => {
+        const copy = { ...prev }
+        for (const id of ids) delete copy[id]
+        return copy
+      })
+      try {
+        await saveTemplates(next)
+      } catch {
+        toast.error('Some templates could not be saved')
+        return
+      }
+      isClosingRef.current = true
+      getCurrentWindow().close()
+    },
+    [templates, workingCopies]
+  )
+
+  const handleDiscardAllAndClose = useCallback(() => {
+    isClosingRef.current = true
+    getCurrentWindow().close()
+  }, [])
+
+  const handleCancelClose = useCallback(() => {
+    setCloseDialogOpen(false)
+  }, [])
+
   const selected = templates.find((t) => t.id === selectedId) ?? null
+
+  const dirtyIds = new Set(Object.keys(workingCopies))
+  const dirtyEntries = templates
+    .filter(t => dirtyIds.has(t.id))
+    .map(t => ({ id: t.id, displayName: workingCopies[t.id].name }))
 
   return (
     <>
@@ -136,6 +222,7 @@ export default function App() {
           <TemplateList
             templates={templates}
             selectedId={selectedId}
+            dirtyIds={dirtyIds}
             isDark={isDark}
             onSelect={handleSelectTemplate}
             onNew={handleNewTemplate}
@@ -147,10 +234,11 @@ export default function App() {
             template={selected}
             templates={templates}
             saveSignal={saveSignal}
+            workingCopy={workingCopies[selected?.id ?? '']}
             onSave={handleSave}
             onDelete={handleDelete}
             onDuplicate={handleDuplicate}
-            onDirtyChange={setIsDirty}
+            onWorkingStateChange={handleWorkingStateChange}
           />
         }
       />
@@ -159,6 +247,13 @@ export default function App() {
         defaultName={newDialogDefault}
         onConfirm={handleNewTemplateConfirm}
         onClose={() => setNewDialogOpen(false)}
+      />
+      <UnsavedChangesDialog
+        open={closeDialogOpen}
+        dirtyEntries={dirtyEntries}
+        onSaveSelected={handleSaveSelectedAndClose}
+        onDiscardAll={handleDiscardAllAndClose}
+        onCancel={handleCancelClose}
       />
       <Toaster />
     </>

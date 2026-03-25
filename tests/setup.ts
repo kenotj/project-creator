@@ -18,3 +18,10 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
 vi.mock('@tauri-apps/api/path', () => ({
   homeDir: vi.fn().mockResolvedValue('/mock/home'),
 }))
+
+vi.mock('@tauri-apps/api/window', () => ({
+  getCurrentWindow: vi.fn(() => ({
+    onCloseRequested: vi.fn().mockResolvedValue(vi.fn()),
+    close: vi.fn().mockResolvedValue(undefined),
+  })),
+}))
