@@ -104,15 +104,6 @@ export function TemplateEditor({
     if (saveSignal > 0) handleSave()
   }, [saveSignal])
 
-  // Empty state
-  if (!template) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-        Select or create a template to get started.
-      </div>
-    )
-  }
-
   const handleAddFolder = () => {
     setFolders((prev) => [...prev, { name: 'New Folder', children: [] }])
   }
@@ -139,7 +130,7 @@ export function TemplateEditor({
     const result = validateName(val)
     if (!result.valid) {
       setNameError(result.error ?? null)
-    } else if (templates.some((t) => t.name === val && t.id !== template.id)) {
+    } else if (templates.some((t) => t.name === val && t.id !== template?.id)) {
       setNameError('Name already exists')
     } else {
       setNameError(null)
@@ -148,64 +139,72 @@ export function TemplateEditor({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-        <div className="flex flex-col">
-          <Input
-            value={name}
-            onChange={(e) => handleNameChange(e.target.value)}
-            className={cn('h-8 w-44 text-sm', nameError && 'border-red-500')}
-          />
-          {nameError && <span className="text-xs text-red-500 mt-0.5">{nameError}</span>}
+      {/* Toolbar — only shown when template exists */}
+      {template && (
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+          <div className="flex flex-col">
+            <Input
+              value={name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              className={cn('h-8 w-44 text-sm', nameError && 'border-red-500')}
+            />
+            {nameError && <span className="text-xs text-red-500 mt-0.5">{nameError}</span>}
+          </div>
+          <div className="flex-1" />
+          <Button variant="outline" size="sm" onClick={() => onDuplicate(template.id)}>
+            <CopyIcon className="w-3.5 h-3.5 mr-1.5" />
+            Duplicate
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950"
+            onClick={() => onDelete(template.id)}
+          >
+            <Trash2Icon className="w-3.5 h-3.5 mr-1.5" />
+            Delete
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
+            disabled={!canSave}
+          >
+            <SaveIcon className="w-3.5 h-3.5 mr-1.5" />
+            Save
+          </Button>
         </div>
-        <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={() => onDuplicate(template.id)}>
-          <CopyIcon className="w-3.5 h-3.5 mr-1.5" />
-          Duplicate
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950"
-          onClick={() => onDelete(template.id)}
-        >
-          <Trash2Icon className="w-3.5 h-3.5 mr-1.5" />
-          Delete
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSave}
-          disabled={!canSave}
-        >
-          <SaveIcon className="w-3.5 h-3.5 mr-1.5" />
-          Save
-        </Button>
-      </div>
+      )}
 
       {/* Tree area */}
       <ScrollArea className="flex-1 px-3 py-2">
-        <FolderTree
-          nodes={folders}
-          selectedPath={selectedPath}
-          onSelect={setSelectedPath}
-          onAddSubfolder={handleAddSubfolder}
-          onRename={handleRename}
-          onDuplicate={handleDuplicateNode}
-          onDelete={handleDeleteNode}
-        />
+        {template ? (
+          <FolderTree
+            nodes={folders}
+            selectedPath={selectedPath}
+            onSelect={setSelectedPath}
+            onAddSubfolder={handleAddSubfolder}
+            onRename={handleRename}
+            onDuplicate={handleDuplicateNode}
+            onDelete={handleDeleteNode}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground pt-8">
+            Select or create a template to get started.
+          </div>
+        )}
       </ScrollArea>
 
-      {/* Action bar */}
+      {/* Action bar — always rendered, buttons disabled when no template */}
       <div className="flex items-center gap-1.5 px-3 py-2 border-t border-border">
-        <Button variant="outline" size="sm" onClick={handleAddFolder}>
+        <Button variant="outline" size="sm" onClick={handleAddFolder} disabled={!template}>
           <PlusIcon className="w-3 h-3 mr-1" />
           Folder
         </Button>
         <Button
           variant="outline"
           size="sm"
-          disabled={!selectedPath}
+          disabled={!template || !selectedPath}
           onClick={() => selectedPath && handleAddSubfolder(selectedPath)}
         >
           <PlusIcon className="w-3 h-3 mr-1" />
@@ -214,7 +213,7 @@ export function TemplateEditor({
         <Button
           variant="outline"
           size="sm"
-          disabled={!selectedPath}
+          disabled={!template || !selectedPath}
           onClick={() => {
             if (selectedPath) {
               window.dispatchEvent(new CustomEvent('rename-node', { detail: selectedPath }))
@@ -226,14 +225,14 @@ export function TemplateEditor({
         <Button
           variant="outline"
           size="sm"
-          disabled={!selectedPath}
+          disabled={!template || !selectedPath}
           className="text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950"
           onClick={() => selectedPath && handleDeleteNode(selectedPath)}
         >
           Remove
         </Button>
         <div className="flex-1" />
-        <GenerateProjectButton template={{ ...template, name, folders }} />
+        {template && <GenerateProjectButton template={{ ...template, name, folders }} />}
       </div>
     </div>
   )
