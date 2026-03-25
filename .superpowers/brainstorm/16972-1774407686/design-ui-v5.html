@@ -1,0 +1,145 @@
+<h2>UI Mockup v5 — Create Project + Updated Context Menu</h2>
+<p class="subtitle">All buttons same 1.5× height, "Create Project", context menu with Duplicate</p>
+
+<div style="border:1px solid #e4e4e7;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08);max-width:700px">
+  <div style="background:#fff;display:flex;height:500px;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:13px;color:#09090b">
+
+    <!-- Sidebar -->
+    <div style="width:210px;background:#fafafa;border-right:1px solid #e4e4e7;display:flex;flex-direction:column">
+      <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e4e4e7">
+        <span style="font-size:11px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.8px">Templates</span>
+        <!-- Toggle -->
+        <div style="position:relative;width:56px;height:30px;background:#e4e4e7;border-radius:9999px;cursor:pointer;display:flex;align-items:center;padding:0 5px;box-sizing:border-box;justify-content:space-between">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5">
+            <circle cx="12" cy="12" r="4"/>
+            <line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <div style="position:absolute;left:4px;top:4px;width:22px;height:22px;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.2)"></div>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:8px 6px">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;margin-bottom:2px;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span style="color:#1e40af;font-weight:600;flex:1">My Project</span>
+          <span style="width:6px;height:6px;background:#2563eb;border-radius:50%"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 8px;border-radius:6px;margin-bottom:2px;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span style="color:#71717a;flex:1">Web App</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 8px;border-radius:6px;margin-bottom:2px;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span style="color:#71717a;flex:1">API Service</span>
+        </div>
+      </div>
+      <div style="padding:10px 8px;border-top:1px solid #e4e4e7">
+        <button style="width:100%;background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:13px 10px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Template
+        </button>
+      </div>
+    </div>
+
+    <!-- Editor -->
+    <div style="flex:1;display:flex;flex-direction:column;background:#fff">
+
+      <!-- Toolbar -->
+      <div style="padding:10px 14px;border-bottom:1px solid #e4e4e7;display:flex;align-items:center;gap:8px">
+        <input value="My Project" style="background:#fafafa;border:1px solid #e4e4e7;color:#09090b;padding:11px 12px;border-radius:6px;font-size:13px;width:155px;outline:none;font-family:inherit">
+        <div style="flex:1"></div>
+        <button style="background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:11px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05)">Duplicate</button>
+        <button style="background:#fff;border:1px solid #fecaca;color:#ef4444;padding:11px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500">Delete</button>
+        <button style="background:#fff;border:1px solid #e4e4e7;color:#a1a1aa;padding:11px 14px;border-radius:6px;font-size:13px;cursor:pointer;opacity:.45">Save</button>
+      </div>
+
+      <!-- Tree -->
+      <div style="flex:1;padding:12px 14px;overflow-y:auto">
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;cursor:pointer;margin-bottom:1px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span style="color:#09090b;font-weight:500">src</span>
+        </div>
+        <div style="padding-left:20px">
+          <!-- Selected node with context menu -->
+          <div style="position:relative;margin-bottom:2px">
+            <div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;background:#eff6ff;border:1px solid #bfdbfe;cursor:pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span style="color:#1e40af;font-weight:600">components</span>
+            </div>
+            <!-- Context menu -->
+            <div style="position:absolute;left:125px;top:-2px;background:#fff;border:1px solid #e4e4e7;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;min-width:165px;padding:4px">
+              <div style="padding:8px 12px;border-radius:5px;font-size:12px;color:#09090b;cursor:pointer;display:flex;align-items:center;gap:9px;font-weight:500">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Subfolder
+              </div>
+              <div style="padding:8px 12px;border-radius:5px;font-size:12px;color:#09090b;cursor:pointer;display:flex;align-items:center;gap:9px;font-weight:500">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Rename
+              </div>
+              <div style="padding:8px 12px;border-radius:5px;font-size:12px;color:#09090b;cursor:pointer;display:flex;align-items:center;gap:9px;font-weight:500">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Duplicate
+              </div>
+              <div style="height:1px;background:#f4f4f5;margin:3px 6px"></div>
+              <div style="padding:8px 12px;border-radius:5px;font-size:12px;color:#ef4444;cursor:pointer;display:flex;align-items:center;gap:9px;font-weight:500">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                Delete
+              </div>
+            </div>
+          </div>
+
+          <div style="padding-left:20px">
+            <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;cursor:pointer;margin-bottom:1px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span style="color:#71717a">ui</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;cursor:pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span style="color:#71717a">hooks</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;cursor:pointer;margin-top:1px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span style="color:#71717a">utils</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;cursor:pointer;margin-top:1px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span style="color:#71717a">public</span>
+        </div>
+      </div>
+
+      <!-- Bottom action bar — all same 1.5× height -->
+      <div style="padding:10px 14px;border-top:1px solid #e4e4e7;display:flex;align-items:center;gap:6px">
+        <button style="background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:11px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05);display:flex;align-items:center;gap:5px">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Folder
+        </button>
+        <button style="background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:11px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05);display:flex;align-items:center;gap:5px">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Subfolder
+        </button>
+        <button style="background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:11px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05)">Rename</button>
+        <button style="background:#fff;border:1px solid #fecaca;color:#ef4444;padding:11px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500">Remove</button>
+        <div style="flex:1"></div>
+        <!-- Create Project — same height as other buttons -->
+        <button style="background:#2563eb;border:1px solid #1d4ed8;color:#fff;padding:11px 20px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px;box-shadow:0 1px 4px rgba(37,99,235,.3)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Create Project
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p style="color:#888;font-size:13px;margin-top:20px">Context menu now has Add Subfolder → Rename → Duplicate → (separator) → Delete. Does this look good to proceed?</p>

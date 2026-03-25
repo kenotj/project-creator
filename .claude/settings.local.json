@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/kennethong/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.5/skills/brainstorming/scripts/start-server.sh --project-dir /Users/kennethong/repos/project-creator)",
+      "Bash(npm create:*)",
+      "Bash(yes \"\")",
+      "Bash(printf 'y\\\\n')",
+      "Bash(npx create-vite@latest . --template react-ts --force)",
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(printf 'ProjectCreator\\\\nProjectCreator\\\\n../dist\\\\nhttp://localhost:1420\\\\nnpm run dev\\\\nnpm run build\\\\n')",
+      "Bash(npx tauri:*)",
+      "Bash(rustc --version)",
+      "Bash(cargo --version)"
+    ]
+  }
+}

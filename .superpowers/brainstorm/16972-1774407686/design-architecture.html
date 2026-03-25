@@ -1,0 +1,68 @@
+<h2>Architecture Design</h2>
+<p class="subtitle">Tauri + React + shadcn/ui — does this structure look right?</p>
+
+<div class="section">
+  <div class="label">Repo Structure</div>
+  <div style="background:#0d0d0d;border-radius:8px;padding:20px;font-family:'SF Mono',monospace;font-size:12px;line-height:1.8;color:#aaa">
+    <div><span style="color:#60a5fa">project-creator/</span></div>
+    <div style="padding-left:20px"><span style="color:#4ade80">src/</span> <span style="color:#555">← new React frontend</span></div>
+    <div style="padding-left:40px"><span style="color:#e2e8f0">components/</span></div>
+    <div style="padding-left:60px"><span style="color:#fcd34d">AppLayout.tsx</span> <span style="color:#555">— root layout, wires panels</span></div>
+    <div style="padding-left:60px"><span style="color:#fcd34d">TemplateList.tsx</span> <span style="color:#555">— compact sidebar</span></div>
+    <div style="padding-left:60px"><span style="color:#fcd34d">TemplateEditor.tsx</span> <span style="color:#555">— editor + toolbar</span></div>
+    <div style="padding-left:60px"><span style="color:#fcd34d">FolderTree.tsx</span> <span style="color:#555">— recursive tree w/ inline rename</span></div>
+    <div style="padding-left:60px"><span style="color:#fcd34d">GenerateDialog.tsx</span> <span style="color:#555">— modal: name + destination</span></div>
+    <div style="padding-left:40px"><span style="color:#e2e8f0">lib/</span></div>
+    <div style="padding-left:60px"><span style="color:#c4b5fd">models.ts</span> <span style="color:#555">— FolderNode, Template types</span></div>
+    <div style="padding-left:60px"><span style="color:#c4b5fd">store.ts</span> <span style="color:#555">— TemplateStore (CRUD + JSON persistence)</span></div>
+    <div style="padding-left:60px"><span style="color:#c4b5fd">validation.ts</span> <span style="color:#555">— validateName()</span></div>
+    <div style="padding-left:60px"><span style="color:#c4b5fd">generate.ts</span> <span style="color:#555">— generateProject() via Tauri fs</span></div>
+    <div style="padding-left:40px"><span style="color:#fcd34d">App.tsx</span> <span style="color:#555">— state, keyboard shortcuts (Cmd/Ctrl+S)</span></div>
+    <div style="padding-left:40px"><span style="color:#fcd34d">main.tsx</span></div>
+    <div style="padding-left:20px"><span style="color:#4ade80">src-tauri/</span> <span style="color:#555">← Tauri config + Rust boilerplate only</span></div>
+    <div style="padding-left:40px"><span style="color:#e2e8f0">tauri.conf.json</span></div>
+    <div style="padding-left:40px"><span style="color:#e2e8f0">Cargo.toml</span></div>
+    <div style="padding-left:40px"><span style="color:#e2e8f0">src/main.rs</span> <span style="color:#555">— no custom commands needed</span></div>
+    <div style="padding-left:20px"><span style="color:#4ade80">tests/</span> <span style="color:#555">← Python tests → Vitest</span></div>
+    <div style="padding-left:40px"><span style="color:#fb923c">models.test.ts</span></div>
+    <div style="padding-left:40px"><span style="color:#fb923c">store.test.ts</span></div>
+    <div style="padding-left:40px"><span style="color:#fb923c">validation.test.ts</span></div>
+    <div style="padding-left:40px"><span style="color:#fb923c">generate.test.ts</span></div>
+    <div style="padding-left:20px"><span style="color:#e2e8f0">ProjectCreator.py</span> <span style="color:#555">— kept as reference (unchanged)</span></div>
+    <div style="padding-left:20px"><span style="color:#e2e8f0">package.json, vite.config.ts, tsconfig.json</span></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Tauri APIs Used (no Rust code needed)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+    <div style="background:#111;border-radius:6px;padding:14px">
+      <div style="color:#60a5fa;font-size:12px;font-family:monospace;margin-bottom:6px">@tauri-apps/plugin-fs</div>
+      <div style="color:#888;font-size:12px">Read/write ~/.projectcreator/templates.json<br>mkdir for project generation</div>
+    </div>
+    <div style="background:#111;border-radius:6px;padding:14px">
+      <div style="color:#60a5fa;font-size:12px;font-family:monospace;margin-bottom:6px">@tauri-apps/plugin-dialog</div>
+      <div style="color:#888;font-size:12px">Native folder picker (Browse button)<br>Success confirmation</div>
+    </div>
+    <div style="background:#111;border-radius:6px;padding:14px">
+      <div style="color:#60a5fa;font-size:12px;font-family:monospace;margin-bottom:6px">@tauri-apps/api/path</div>
+      <div style="color:#888;font-size:12px">homeDir() to locate<br>~/.projectcreator/</div>
+    </div>
+    <div style="background:#111;border-radius:6px;padding:14px">
+      <div style="color:#c4b5fd;font-size:12px;font-family:monospace;margin-bottom:6px">shadcn/ui components</div>
+      <div style="color:#888;font-size:12px">Button, Input, Dialog, ScrollArea,<br>Badge, Separator + custom FolderTree</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">State Management</div>
+  <div style="background:#111;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7">
+    <div>• <span style="color:#e2e8f0">App.tsx</span> holds top-level state: <code style="background:#1a1a1a;padding:1px 5px;border-radius:3px;color:#fcd34d">templates[]</code>, <code style="background:#1a1a1a;padding:1px 5px;border-radius:3px;color:#fcd34d">selectedId</code>, <code style="background:#1a1a1a;padding:1px 5px;border-radius:3px;color:#fcd34d">isDirty</code></div>
+    <div>• <span style="color:#e2e8f0">TemplateEditor</span> manages local tree editing state (pending changes)</div>
+    <div>• No external state library needed — React useState + prop callbacks</div>
+    <div>• Unsaved-changes guard preserved (prompt before switching/deleting)</div>
+  </div>
+</div>
+
+<p style="color:#888;font-size:13px;margin-top:20px">Does this architecture look right? Let me know any changes before we move to the UI mockup.</p>

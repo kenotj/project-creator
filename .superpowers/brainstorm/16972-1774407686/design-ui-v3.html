@@ -1,0 +1,136 @@
+<h2>UI Mockup v3 — Light Mode + Context Menu</h2>
+<p class="subtitle">Light theme with dark/light toggle, and right-click context menu on tree nodes</p>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+
+  <!-- LIGHT MODE -->
+  <div style="flex:1;min-width:400px">
+    <div class="label" style="margin-bottom:8px">Light Mode</div>
+    <div style="border:1px solid #e4e4e7;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)">
+      <div style="background:#fff;display:flex;height:420px;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:13px;color:#09090b">
+
+        <!-- Sidebar light -->
+        <div style="width:200px;background:#fafafa;border-right:1px solid #e4e4e7;display:flex;flex-direction:column">
+          <div style="padding:12px 14px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e4e4e7">
+            <span style="font-size:11px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.8px">Templates</span>
+            <!-- Theme toggle -->
+            <div style="display:flex;align-items:center;gap:4px;background:#f4f4f5;padding:3px;border-radius:6px;border:1px solid #e4e4e7">
+              <div style="padding:3px 6px;border-radius:4px;background:#fff;font-size:10px;color:#09090b;box-shadow:0 1px 2px rgba(0,0,0,.1)">☀️</div>
+              <div style="padding:3px 6px;border-radius:4px;font-size:10px;color:#71717a">🌙</div>
+            </div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:8px 6px">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;margin-bottom:1px;cursor:pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span style="color:#1e40af;font-weight:600;flex:1">My Project</span>
+              <span style="width:6px;height:6px;background:#2563eb;border-radius:50%"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;margin-bottom:1px;cursor:pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span style="color:#71717a;flex:1">Web App</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;margin-bottom:1px;cursor:pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span style="color:#71717a;flex:1">API Service</span>
+            </div>
+          </div>
+          <div style="padding:10px 8px;border-top:1px solid #e4e4e7">
+            <button style="width:100%;background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Template
+            </button>
+          </div>
+        </div>
+
+        <!-- Editor light -->
+        <div style="flex:1;display:flex;flex-direction:column;background:#fff">
+          <div style="padding:10px 14px;border-bottom:1px solid #e4e4e7;display:flex;align-items:center;gap:8px">
+            <input value="My Project" style="background:#fafafa;border:1px solid #e4e4e7;color:#09090b;padding:6px 10px;border-radius:6px;font-size:13px;width:160px;outline:none;font-family:inherit" readonly>
+            <div style="flex:1"></div>
+            <button style="background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05)">Duplicate</button>
+            <button style="background:#fff;border:1px solid #fecaca;color:#ef4444;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500">Delete</button>
+            <button style="background:#fff;border:1px solid #e4e4e7;color:#a1a1aa;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;opacity:.5">Save</button>
+          </div>
+          <div style="flex:1;padding:12px 14px;overflow-y:auto;position:relative">
+            <div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;cursor:pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span style="color:#09090b;font-weight:500">src</span>
+            </div>
+            <div style="padding-left:20px">
+              <div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;background:#eff6ff;border:1px solid #bfdbfe;cursor:pointer;margin-bottom:1px">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span style="color:#1e40af;font-weight:600">components</span>
+              </div>
+              <div style="padding-left:20px">
+                <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;cursor:pointer">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <span style="color:#71717a">ui</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;cursor:pointer">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span style="color:#71717a">utils</span>
+              </div>
+
+              <!-- RIGHT-CLICK CONTEXT MENU shown inline -->
+              <div style="position:relative;margin-top:4px">
+                <div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;cursor:pointer;background:#f4f4f5">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <span style="color:#71717a">hooks</span>
+                </div>
+                <!-- Context menu popup -->
+                <div style="position:absolute;left:60px;top:-4px;background:#fff;border:1px solid #e4e4e7;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:10;min-width:160px;padding:4px">
+                  <div style="padding:6px 10px;border-radius:5px;font-size:12px;color:#09090b;cursor:pointer;display:flex;align-items:center;gap:8px">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Subfolder
+                  </div>
+                  <div style="padding:6px 10px;border-radius:5px;font-size:12px;color:#09090b;cursor:pointer;display:flex;align-items:center;gap:8px">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Rename
+                  </div>
+                  <div style="height:1px;background:#f4f4f5;margin:4px 0"></div>
+                  <div style="padding:6px 10px;border-radius:5px;font-size:12px;color:#ef4444;cursor:pointer;display:flex;align-items:center;gap:8px">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    Delete
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:8px 14px;border-top:1px solid #e4e4e7;display:flex;align-items:center;gap:6px">
+            <button style="background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05);display:flex;align-items:center;gap:4px">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Folder
+            </button>
+            <button style="background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05);display:flex;align-items:center;gap:4px">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Subfolder
+            </button>
+            <button style="background:#fff;border:1px solid #e4e4e7;color:#09090b;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500">Rename</button>
+            <button style="background:#fff;border:1px solid #fecaca;color:#ef4444;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500">Remove</button>
+            <div style="flex:1"></div>
+            <button style="background:#2563eb;border:1px solid #1d4ed8;color:#fff;padding:6px 16px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Generate Project
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:20px">
+  <div class="label">Context Menu — actions available on right-click</div>
+  <div style="background:#111;border-radius:6px;padding:14px;font-size:13px;color:#a1a1aa;line-height:1.8;margin-top:8px">
+    <div>• <span style="color:#fafafa">Add Subfolder</span> — create a child folder under right-clicked node</div>
+    <div>• <span style="color:#fafafa">Rename</span> — inline edit the node name</div>
+    <div>• <span style="color:#ef4444">Delete</span> — remove node and all its children</div>
+  </div>
+</div>
+
+<p style="color:#888;font-size:13px;margin-top:20px">Light mode shown with context menu on "hooks". The theme toggle (☀️/🌙) lives in the sidebar header. Does this work?</p>
