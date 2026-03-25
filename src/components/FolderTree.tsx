@@ -1,19 +1,8 @@
 // src/components/FolderTree.tsx
 import { useState, useRef, useEffect } from 'react'
-import { ChevronRight, ChevronDown, FolderIcon, FolderOpenIcon, FolderTreeIcon, PencilIcon, Trash2Icon } from 'lucide-react'
-import { Button } from './ui/button'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from './ui/context-menu'
-import { Collapsible, CollapsibleContent } from './ui/collapsible'
-import { cn } from '@/lib/utils'
-import { validateName } from '@/lib/validation'
+import { FolderTreeRow } from './FolderTreeRow'
+import { getVisiblePaths, getNodeAtPath, getSiblingsAtPath } from '@/lib/tree-operations'
 import type { FolderNode } from '@/lib/models'
-import { getVisiblePaths, getNodeAtPath } from '@/lib/tree-operations'
 
 interface FolderTreeProps {
   nodes: FolderNode[]
@@ -32,234 +21,6 @@ interface FolderTreeProps {
   onDelete: (paths: string[]) => void
   onIndent: (path: number[]) => void
   onOutdent: (path: number[]) => void
-}
-
-interface NodeItemProps {
-  node: FolderNode
-  path: number[]
-  selectedPaths: string[]
-  siblingNames: string[]
-  isFocused: boolean
-  isEditing: boolean
-  expandedPaths: Set<string>
-  // Needed only for computing child isFocused/isEditing at the call site
-  focusedPath: number[] | null
-  editingPath: number[] | null
-  onSelect: (paths: string[]) => void
-  onFocusChange: (path: number[] | null) => void
-  onEditingChange: (path: number[] | null) => void
-  onToggleExpand: (path: number[]) => void
-  onAddSubfolder: (path: number[]) => void
-  onAddSiblingAfter: (path: number[]) => void
-  onRename: (path: number[], newName: string) => void
-  onDuplicate: (paths: string[]) => void
-  onDelete: (paths: string[]) => void
-}
-
-function NodeItem({
-  node, path, selectedPaths, siblingNames,
-  isFocused, isEditing, expandedPaths, focusedPath, editingPath,
-  onSelect, onFocusChange, onEditingChange, onToggleExpand,
-  onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete
-}: NodeItemProps) {
-  const [renameValue, setRenameValue] = useState(node.name)
-  const [renameError, setRenameError] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const escapePressedRef = useRef(false)
-  const pathStr = path.join(',')
-  const isSelected = selectedPaths.includes(pathStr)
-  const isExpanded = expandedPaths.has(pathStr)
-  const hasChildren = node.children.length > 0
-
-  useEffect(() => {
-    if (isEditing) {
-      setRenameValue(node.name)
-      setRenameError(null)
-      setTimeout(() => inputRef.current?.select(), 0)
-    }
-  }, [isEditing, node.name])
-
-  const commitRename = () => {
-    if (escapePressedRef.current) {
-      escapePressedRef.current = false
-      return
-    }
-    const result = validateName(renameValue)
-    if (!result.valid) {
-      setRenameError(result.error ?? 'Invalid name')
-      return
-    }
-    if (siblingNames.includes(renameValue.trim())) {
-      setRenameError('A folder with this name already exists')
-      return
-    }
-    onRename(path, renameValue.trim())
-    onEditingChange(null)
-    setRenameError(null)
-  }
-
-  const cancelRename = () => {
-    escapePressedRef.current = true
-    onEditingChange(null)
-    setRenameError(null)
-    setRenameValue(node.name)
-  }
-
-  return (
-    <Collapsible open={isExpanded} onOpenChange={() => onToggleExpand(path)}>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div
-            className={cn(
-              'flex items-center gap-1.5 px-1.5 py-1 rounded-md cursor-pointer select-none text-sm group/item transition-colors',
-              isSelected || isFocused
-                ? 'bg-accent border border-muted text-foreground font-bold shadow-sm'
-                : 'hover:bg-accent/50 hover:text-foreground text-foreground/80'
-            )}
-            data-path={pathStr}
-            onClick={(e) => {
-              e.stopPropagation()
-              onFocusChange(path)
-              if (e.metaKey || e.ctrlKey) {
-                onSelect(isSelected ? selectedPaths.filter(p => p !== pathStr) : [...selectedPaths, pathStr])
-              } else if (e.shiftKey && selectedPaths.length > 0) {
-                onSelect([pathStr])
-              } else {
-                onSelect([pathStr])
-              }
-            }}
-            onDoubleClick={() => onEditingChange(path)}
-          >
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onToggleExpand(path) }}
-              className="flex-shrink-0 text-muted-foreground hover:text-foreground"
-            >
-              {hasChildren
-                ? isExpanded
-                  ? <ChevronDown className="w-3 h-3" />
-                  : <ChevronRight className="w-3 h-3" />
-                : <span className="w-3 h-3 inline-block" />}
-            </button>
-            {isExpanded && hasChildren
-              ? <FolderOpenIcon className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
-              : <FolderIcon className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />}
-
-            {isEditing ? (
-              <div className="flex-1 flex flex-col">
-                <input
-                  ref={inputRef}
-                  value={renameValue}
-                  onChange={(e) => { setRenameValue(e.target.value); setRenameError(null) }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); commitRename() }
-                    if (e.key === 'Escape') cancelRename()
-                  }}
-                  onBlur={commitRename}
-                  onClick={(e) => e.stopPropagation()}
-                  className={cn(
-                    'w-full bg-background border rounded px-1 py-0 text-sm outline-none',
-                    renameError ? 'border-red-500' : 'border-ring'
-                  )}
-                />
-                {renameError && (
-                  <span className="text-xs text-red-500 mt-0.5">{renameError}</span>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center min-w-0">
-                <span className={cn("truncate", isSelected || isFocused ? "font-bold" : "font-medium")}>
-                  {node.name}
-                </span>
-                {isSelected && selectedPaths.length === 1 && (
-                  <div className="flex items-center gap-2 ml-3 animate-in fade-in slide-in-from-left-1 duration-200">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 hover:bg-foreground/10"
-                      onClick={(e) => { e.stopPropagation(); onAddSubfolder(path) }}
-                      title="Add Subfolder"
-                    >
-                      <FolderTreeIcon className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 hover:bg-foreground/10"
-                      onClick={(e) => { e.stopPropagation(); onEditingChange(path) }}
-                      title="Rename"
-                    >
-                      <PencilIcon className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-red-500 hover:text-red-500 hover:bg-red-500/10"
-                      onClick={(e) => { e.stopPropagation(); onDelete([pathStr]) }}
-                      title="Delete"
-                    >
-                      <Trash2Icon className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </ContextMenuTrigger>
-
-        <ContextMenuContent className="w-44">
-          <ContextMenuItem onClick={() => onAddSubfolder(path)}>
-            Add Subfolder
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => onEditingChange(path)}>
-            Rename
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => onDuplicate([pathStr])}>
-            Duplicate
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onClick={() => onDelete([pathStr])}
-            className="text-red-500 focus:text-red-500"
-          >
-            Delete
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-
-      <CollapsibleContent>
-        <div className="ml-4">
-          {node.children.map((child, i) => {
-            const childPath = [...path, i]
-            const childPathStr = childPath.join(',')
-            return (
-              <NodeItem
-                key={`${i}-${child.name}`}
-                node={child}
-                path={childPath}
-                selectedPaths={selectedPaths}
-                siblingNames={node.children.map(c => c.name).filter(n => n !== child.name)}
-                isFocused={focusedPath !== null && focusedPath.join(',') === childPathStr}
-                isEditing={editingPath !== null && editingPath.join(',') === childPathStr}
-                expandedPaths={expandedPaths}
-                focusedPath={focusedPath}
-                editingPath={editingPath}
-                onSelect={onSelect}
-                onFocusChange={onFocusChange}
-                onEditingChange={onEditingChange}
-                onToggleExpand={onToggleExpand}
-                onAddSubfolder={onAddSubfolder}
-                onAddSiblingAfter={onAddSiblingAfter}
-                onRename={onRename}
-                onDuplicate={onDuplicate}
-                onDelete={onDelete}
-              />
-            )
-          })}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  )
 }
 
 export function FolderTree({
@@ -469,6 +230,9 @@ export function FolderTree({
     }
   }
 
+  // Compute the flat list of visible nodes
+  const visibleNodes = getVisiblePaths(nodes, expandedPaths)
+
   return (
     <div
       ref={containerRef}
@@ -482,26 +246,29 @@ export function FolderTree({
         </div>
       ) : (
         <div className="space-y-0.5">
-          {nodes.map((node, i) => {
-            const rootPathStr = String(i)
+          {visibleNodes.map(({ path, depth, node }) => {
+            const pathStr = path.join(',')
+            const siblings = getSiblingsAtPath(nodes, path)
+            const siblingNames = siblings
+              .filter((_, i) => i !== path[path.length - 1])
+              .map((s) => s.name)
+
             return (
-              <NodeItem
-                key={`${i}-${node.name}`}
+              <FolderTreeRow
+                key={pathStr}
                 node={node}
-                path={[i]}
+                path={path}
+                depth={depth}
                 selectedPaths={selectedPaths}
-                siblingNames={nodes.map(n => n.name).filter(n => n !== node.name)}
-                isFocused={focusedPath !== null && focusedPath.join(',') === rootPathStr}
-                isEditing={editingPath !== null && editingPath.join(',') === rootPathStr}
-                expandedPaths={expandedPaths}
-                focusedPath={focusedPath}
-                editingPath={editingPath}
+                isFocused={focusedPath !== null && focusedPath.join(',') === pathStr}
+                isEditing={editingPath !== null && editingPath.join(',') === pathStr}
+                isExpanded={expandedPaths.has(pathStr)}
+                siblingNames={siblingNames}
                 onSelect={onSelect}
                 onFocusChange={onFocusChange}
                 onEditingChange={onEditingChange}
                 onToggleExpand={onToggleExpand}
                 onAddSubfolder={onAddSubfolder}
-                onAddSiblingAfter={onAddSiblingAfter}
                 onRename={onRename}
                 onDuplicate={onDuplicate}
                 onDelete={onDelete}
