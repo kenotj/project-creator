@@ -8,60 +8,8 @@ import { FolderTree } from './FolderTree'
 import { GenerateDialog } from './GenerateDialog'
 import { validateName } from '@/lib/validation'
 import type { Template, FolderNode } from '@/lib/models'
+import { addNodeAt, renameNodeAt, deleteNodeAt, duplicateNodeAt } from '@/lib/tree-operations'
 import { cn } from '@/lib/utils'
-
-// Tree mutation helpers
-
-function addNodeAt(nodes: FolderNode[], path: number[], newNode: FolderNode): FolderNode[] {
-  if (path.length === 0) return [...nodes, newNode]
-  return nodes.map((n, i) =>
-    i === path[0]
-      ? {
-        ...n, children: path.length === 1
-          ? [...n.children, newNode]
-          : addNodeAt(n.children, path.slice(1), newNode)
-      }
-      : n
-  )
-}
-
-function renameNodeAt(nodes: FolderNode[], path: number[], name: string): FolderNode[] {
-  return nodes.map((n, i) =>
-    i === path[0]
-      ? path.length === 1
-        ? { ...n, name }
-        : { ...n, children: renameNodeAt(n.children, path.slice(1), name) }
-      : n
-  )
-}
-
-function deleteNodeAt(nodes: FolderNode[], path: number[]): FolderNode[] {
-  if (path.length === 1) return nodes.filter((_, i) => i !== path[0])
-  return nodes.map((n, i) =>
-    i === path[0] ? { ...n, children: deleteNodeAt(n.children, path.slice(1)) } : n
-  )
-}
-
-function uniqueSiblingName(siblings: FolderNode[], baseName: string): string {
-  const names = new Set(siblings.map((n) => n.name))
-  if (!names.has(baseName)) return baseName
-  let i = 2
-  while (names.has(`${baseName} ${i}`)) i++
-  return `${baseName} ${i}`
-}
-
-function duplicateNodeAt(nodes: FolderNode[], path: number[]): FolderNode[] {
-  if (path.length === 1) {
-    const target = nodes[path[0]]
-    const copy = JSON.parse(JSON.stringify(target)) as FolderNode
-    const baseName = `${copy.name} Copy`
-    copy.name = uniqueSiblingName(nodes, baseName)
-    return [...nodes.slice(0, path[0] + 1), copy, ...nodes.slice(path[0] + 1)]
-  }
-  return nodes.map((n, i) =>
-    i === path[0] ? { ...n, children: duplicateNodeAt(n.children, path.slice(1)) } : n
-  )
-}
 
 interface TemplateEditorProps {
   template: Template | null
