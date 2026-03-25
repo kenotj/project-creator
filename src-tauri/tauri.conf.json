@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ProjectCreator",
+  "productName": "Project Creator",
   "version": "0.0.0",
   "identifier": "com.projectcreator.app",
   "build": {
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "ProjectCreator",
+        "title": "Project Creator",
         "width": 900,
         "height": 600,
         "minWidth": 700,

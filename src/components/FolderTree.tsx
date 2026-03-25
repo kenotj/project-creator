@@ -15,7 +15,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { ChevronRight, ChevronDown, FolderOpenIcon, Plus } from 'lucide-react'
+import { ChevronRight, ChevronDown, FolderIcon, FolderOpenIcon, Plus } from 'lucide-react'
 import { FolderTreeRow } from './FolderTreeRow'
 import { FolderTreeDragOverlay } from './FolderTreeDragOverlay'
 import {
@@ -480,7 +480,11 @@ export function FolderTree({
 
               {/* Content */}
               <div className="flex-1 flex items-center h-[90%] rounded-sm px-2 mr-2">
-                <FolderOpenIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-2" />
+                {isRootExpanded ? (
+                  <FolderOpenIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-2" />
+                ) : (
+                  <FolderIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-2" />
+                )}
                 <span className="truncate text-sm font-semibold text-muted-foreground">
                   &lt;{templateName}&gt;
                 </span>
