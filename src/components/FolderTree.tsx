@@ -34,8 +34,8 @@ interface FolderTreeProps {
   onRename: (path: number[], newName: string) => void
   onDuplicate: (paths: string[]) => void
   onDelete: (paths: string[]) => void
-  onIndent: (path: number[]) => void
-  onOutdent: (path: number[]) => void
+  onIndent: (paths: number[][]) => void
+  onOutdent: (paths: number[][]) => void
   onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
 }
 
@@ -192,9 +192,15 @@ export function FolderTree({
               } else {
                 onSelect(selected)
               }
-            } else if (Math.abs(upEvent.clientX - rect.left - startX) < 5 && Math.abs(upEvent.clientY - rect.top - startY) < 5) {
-              // It was a click on empty area, clear selection
+            } else {
               onSelect([])
+            }
+          } else {
+            // No drag — simple click on empty area, clear selection
+            const upTarget = upEvent.target as HTMLElement
+            if (!upTarget.closest('[data-path]')) {
+              onSelect([])
+              onFocusChange(null)
             }
           }
           return null
@@ -211,7 +217,7 @@ export function FolderTree({
       container.addEventListener('mousedown', handleMouseDown)
       return () => container.removeEventListener('mousedown', handleMouseDown)
     }
-  }, [onSelect, selectedPaths, activeDragId])
+  }, [onSelect, onFocusChange, selectedPaths, activeDragId])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // While renaming, let the input handle all keys except Escape (cancel)
@@ -220,12 +226,14 @@ export function FolderTree({
     // Tab / Shift+Tab
     if (e.key === 'Tab') {
       e.preventDefault()
-      if (focusedPath) {
-        if (e.shiftKey) {
-          onOutdent(focusedPath)
-        } else {
-          onIndent(focusedPath)
-        }
+      const pathsToProcess: number[][] = selectedPaths.length > 0
+        ? selectedPaths.map(sp => sp.split(',').map(Number))
+        : focusedPath ? [focusedPath] : []
+      if (pathsToProcess.length === 0) return
+      if (e.shiftKey) {
+        onOutdent(pathsToProcess)
+      } else {
+        onIndent(pathsToProcess)
       }
       return
     }
@@ -337,7 +345,7 @@ export function FolderTree({
   return (
     <div
       ref={containerRef}
-      className="relative h-full min-h-full select-none cursor-default outline-none focus:outline-none"
+      className="relative flex-1 select-none cursor-default outline-none focus:outline-none"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
@@ -443,7 +451,7 @@ export function FolderTree({
 
       {marquee && (
         <div
-          className="absolute border-2 border-primary bg-primary/20 pointer-events-none z-50 select-none"
+          className="absolute bg-blue-500/20 pointer-events-none z-50 select-none"
           style={{
             left: marquee.x1,
             top: marquee.y1,

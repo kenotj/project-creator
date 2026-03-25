@@ -89,7 +89,7 @@ export function FolderTreeRow({
   })
 
   const style = {
-    paddingLeft: `${depth * 24}px`,
+    // padding is done via spacer divs for better control
     transform: CSS.Transform.toString(transform),
     transition,
   }
@@ -135,10 +135,7 @@ export function FolderTreeRow({
           ref={setNodeRef}
           {...attributes}
           className={cn(
-            'group/row flex items-center h-8 rounded-md cursor-pointer select-none text-sm transition-colors',
-            isFocused || isSelected
-              ? 'bg-accent'
-              : 'hover:bg-accent/50',
+            'group/row flex items-center h-8 cursor-pointer select-none text-sm transition-colors',
             isDragSource && 'opacity-50',
             isDropTarget && 'ring-2 ring-primary bg-primary/10'
           )}
@@ -161,13 +158,22 @@ export function FolderTreeRow({
           }}
           onDoubleClick={() => onEditingChange(path)}
         >
-          {/* Left gutter: chevron / grip swap */}
-          {hasChildren ? (
-            <div className="relative w-5 h-full flex-shrink-0">
-              {/* Chevron - NOT in the listeners div */}
+          {/* Indentation Spacer */}
+          <div style={{ width: depth * 24 }} className="flex-shrink-0" />
+
+          {/* Gutter: Grip + Chevron side-by-side (OUTSIDE the selection box) */}
+          <div
+            {...listeners}
+            data-drag-handle
+            className="w-4 h-full flex-shrink-0 flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab"
+          >
+            <GripVertical className="w-3 h-3 text-muted-foreground" />
+          </div>
+          <div className="w-5 h-full flex-shrink-0 flex items-center justify-center">
+            {hasChildren ? (
               <button
                 type="button"
-                className="absolute inset-0 flex items-center justify-center opacity-100 group-hover/row:opacity-0 transition-opacity text-muted-foreground hover:text-foreground"
+                className="flex items-center justify-center w-full h-full text-muted-foreground hover:text-foreground"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation()
@@ -180,128 +186,108 @@ export function FolderTreeRow({
                   <ChevronRight className="w-3.5 h-3.5" />
                 )}
               </button>
-              {/* Grip - listeners go HERE only */}
-              <div
-                {...listeners}
-                data-drag-handle
-                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab"
-              >
-                <GripVertical className="w-3 h-3 text-muted-foreground" />
-              </div>
-            </div>
-          ) : (
-            <div
-              className="relative w-5 h-full flex-shrink-0"
-              {...listeners}
-              data-drag-handle
-            >
-              {/* For leaf nodes: show grip on hover, no chevron */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab">
-                <GripVertical className="w-3 h-3 text-muted-foreground" />
-              </div>
-            </div>
-          )}
+            ) : null}
+          </div>
 
-          {/* Folder icon */}
-          {isExpanded && hasChildren ? (
-            <FolderOpenIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-1.5" />
-          ) : (
-            <FolderIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-1.5" />
-          )}
+          {/* Selectable Content Area (where the background lives) */}
+          <div className={cn(
+            'flex-1 flex items-center h-[90%] rounded-sm px-2 transition-colors mr-2',
+            isSelected || isFocused
+              ? 'bg-accent text-accent-foreground font-medium ring-1 ring-border/50 shadow-sm'
+              : 'hover:bg-accent/40'
+          )}>
+            {/* Folder icon */}
+            {isExpanded && hasChildren ? (
+              <FolderOpenIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-2" />
+            ) : (
+              <FolderIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-2" />
+            )}
 
-          {/* Name / input */}
-          {isEditing ? (
-            <div className="flex-1 flex flex-col min-w-0">
-              <input
-                ref={inputRef}
-                value={renameValue}
-                onChange={(e) => {
-                  setRenameValue(e.target.value)
-                  setRenameError(null)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    commitRename()
-                  }
-                  if (e.key === 'Escape') cancelRename()
-                }}
-                onBlur={commitRename}
-                onClick={(e) => e.stopPropagation()}
-                className={cn(
-                  'w-full border-0 border-b-2 bg-transparent outline-none text-sm py-0 px-0 font-medium',
-                  renameError ? 'border-red-500' : 'border-primary'
+            {/* Name / input */}
+            {isEditing ? (
+              <div className="flex-1 flex flex-col min-w-0">
+                <input
+                  ref={inputRef}
+                  value={renameValue}
+                  onChange={(e) => {
+                    setRenameValue(e.target.value)
+                    setRenameError(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      commitRename()
+                    }
+                    if (e.key === 'Escape') cancelRename()
+                  }}
+                  onBlur={commitRename}
+                  onClick={(e) => e.stopPropagation()}
+                  className={cn(
+                    'w-full border-0 border-b-2 bg-transparent outline-none text-sm py-0 px-0 font-medium',
+                    renameError ? 'border-red-500' : 'border-primary'
+                  )}
+                />
+                {renameError && (
+                  <span className="text-xs text-red-500 mt-0.5">{renameError}</span>
                 )}
-              />
-              {renameError && (
-                <span className="text-xs text-red-500 mt-0.5">{renameError}</span>
-              )}
-            </div>
-          ) : (
-            <span className="truncate text-sm font-medium flex-1 min-w-0">
-              {node.name}
-            </span>
-          )}
+              </div>
+            ) : (
+              <span className="truncate text-sm flex-1 min-w-0">
+                {node.name}
+              </span>
+            )}
 
-          {/* Right side hover actions */}
-          {!isEditing && (
-            <div className="flex items-center gap-0.5 ml-auto mr-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
-              {/* Add subfolder button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 rounded-sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onAddSubfolder(path)
-                }}
-                title="Add subfolder"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
-
-              {/* More menu button */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 rounded-sm"
-                    onClick={(e) => e.stopPropagation()}
-                    title="More actions"
-                  >
-                    <MoreHorizontal className="w-3.5 h-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
-                  <DropdownMenuItem
-                    onClick={() => onEditingChange(path)}
-                  >
-                    <PencilIcon className="w-3.5 h-3.5 mr-2" />
-                    Rename
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onDuplicate([pathStr])}
-                  >
-                    <CopyIcon className="w-3.5 h-3.5 mr-2" />
-                    Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => onDelete([pathStr])}
-                    className="text-red-500 focus:text-red-500"
-                  >
-                    <Trash2Icon className="w-3.5 h-3.5 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+            {/* Inline actions (only for single select) */}
+            {!isEditing && isSelected && selectedPaths.length === 1 && (
+              <div className="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-200">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAddSubfolder(path)
+                  }}
+                  title="Add subfolder"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreHorizontal className="w-3.5 h-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem onClick={() => onEditingChange(path)}>
+                      <PencilIcon className="w-3.5 h-3.5 mr-2" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onDuplicate([pathStr])}>
+                      <CopyIcon className="w-3.5 h-3.5 mr-2" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onDelete([pathStr])}
+                      className="text-red-500"
+                    >
+                      <Trash2Icon className="w-3.5 h-3.5 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+          </div>
         </div>
       </ContextMenuTrigger>
 
-      {/* Context menu (right-click) */}
       <ContextMenuContent className="w-44">
         <ContextMenuItem onClick={() => onAddSubfolder(path)}>
           <Plus className="w-3.5 h-3.5 mr-2" />
@@ -327,3 +313,5 @@ export function FolderTreeRow({
     </ContextMenu>
   )
 }
+
+

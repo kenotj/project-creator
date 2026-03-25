@@ -223,6 +223,124 @@ export function outdentNode(nodes: FolderNode[], path: number[]): FolderNode[] {
 }
 
 /**
+ * Indent multiple selected nodes. Consecutive selected siblings are moved together
+ * into the preceding non-selected sibling. Nodes whose ancestors are also selected
+ * are skipped (they move with their parent).
+ */
+export function indentNodes(nodes: FolderNode[], paths: number[][]): FolderNode[] {
+  // Filter to top-level selected (no ancestor is also selected)
+  const topLevel = paths.filter(p =>
+    !paths.some(other =>
+      other.length < p.length &&
+      other.every((v, i) => v === p[i])
+    )
+  )
+
+  // Group by parent path
+  const groups = new Map<string, number[][]>()
+  for (const path of topLevel) {
+    const parentKey = path.slice(0, -1).join(',')
+    if (!groups.has(parentKey)) groups.set(parentKey, [])
+    groups.get(parentKey)!.push(path)
+  }
+
+  let result = nodes
+
+  // Process deepest groups first to avoid path invalidation
+  const sortedGroups = [...groups.entries()].sort((a, b) => {
+    const depthA = a[0] === '' ? 0 : a[0].split(',').length
+    const depthB = b[0] === '' ? 0 : b[0].split(',').length
+    return depthB - depthA
+  })
+
+  for (const [, group] of sortedGroups) {
+    group.sort((a, b) => a[a.length - 1] - b[b.length - 1])
+
+    const firstIdx = group[0][group[0].length - 1]
+    if (firstIdx === 0) continue // can't indent first sibling
+
+    const precedingSiblingPath = [...group[0].slice(0, -1), firstIdx - 1]
+
+    // Extract nodes to move (in order)
+    const nodesToMove: FolderNode[] = []
+    for (const path of group) {
+      const node = getNodeAtPath(result, path)
+      if (node) nodesToMove.push(node)
+    }
+
+    // Remove all nodes (reverse index order to preserve indices)
+    for (let i = group.length - 1; i >= 0; i--) {
+      result = deleteNodeAt(result, group[i])
+    }
+
+    // Append them all as last children of the preceding sibling
+    for (const node of nodesToMove) {
+      result = addNodeAt(result, precedingSiblingPath, node)
+    }
+  }
+
+  return result
+}
+
+/**
+ * Outdent multiple selected nodes. Consecutive selected siblings are moved together
+ * to become siblings after their parent. Nodes whose ancestors are also selected
+ * are skipped (they move with their parent).
+ */
+export function outdentNodes(nodes: FolderNode[], paths: number[][]): FolderNode[] {
+  const topLevel = paths.filter(p =>
+    !paths.some(other =>
+      other.length < p.length &&
+      other.every((v, i) => v === p[i])
+    )
+  )
+
+  const groups = new Map<string, number[][]>()
+  for (const path of topLevel) {
+    const parentKey = path.slice(0, -1).join(',')
+    if (!groups.has(parentKey)) groups.set(parentKey, [])
+    groups.get(parentKey)!.push(path)
+  }
+
+  let result = nodes
+
+  const sortedGroups = [...groups.entries()].sort((a, b) => {
+    const depthA = a[0] === '' ? 0 : a[0].split(',').length
+    const depthB = b[0] === '' ? 0 : b[0].split(',').length
+    return depthB - depthA
+  })
+
+  for (const [, group] of sortedGroups) {
+    group.sort((a, b) => a[a.length - 1] - b[b.length - 1])
+
+    if (group[0].length <= 1) continue // can't outdent root-level nodes
+
+    const parentPath = group[0].slice(0, -1)
+    const parentIdx = parentPath[parentPath.length - 1]
+    const grandParentPath = parentPath.slice(0, -1)
+
+    // Extract nodes
+    const nodesToMove: FolderNode[] = []
+    for (const path of group) {
+      const node = getNodeAtPath(result, path)
+      if (node) nodesToMove.push(node)
+    }
+
+    // Remove (reverse order)
+    for (let i = group.length - 1; i >= 0; i--) {
+      result = deleteNodeAt(result, group[i])
+    }
+
+    // Insert as siblings after the parent (reverse order to maintain order)
+    for (let i = nodesToMove.length - 1; i >= 0; i--) {
+      result = insertAtIndex(result, grandParentPath, parentIdx + 1, nodesToMove[i])
+    }
+  }
+
+  return result
+}
+
+/**
  * Returns a flat array of all visible nodes (respecting collapsed state).
  * Root nodes are always visible. A node's children are visible only if that
  * node's path string (comma-joined) is present in `expandedPaths`.

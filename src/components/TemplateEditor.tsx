@@ -10,7 +10,7 @@ import { validateName } from '@/lib/validation'
 import type { Template, FolderNode } from '@/lib/models'
 import {
   addNodeAt, renameNodeAt, deleteNodeAt, duplicateNodeAt,
-  insertNodeAfter, moveNode, indentNode, outdentNode
+  insertNodeAfter, moveNode, indentNodes, outdentNodes
 } from '@/lib/tree-operations'
 import { cn } from '@/lib/utils'
 
@@ -150,24 +150,39 @@ export function TemplateEditor({
     setFolders((prev) => moveNode(prev, fromPath, toPath, position))
   }, [])
 
-  const handleIndent = (path: number[]) => {
-    const lastIdx = path[path.length - 1]
-    if (lastIdx === 0) return // can't indent first sibling
-    const precedingSiblingPath = [...path.slice(0, -1), lastIdx - 1]
-    setFolders((prev) => indentNode(prev, path))
-    // Auto-expand the new parent (preceding sibling becomes parent)
+  const handleIndent = (paths: number[][]) => {
+    // Pre-compute new parent paths for auto-expand
+    const topLevel = paths.filter(p =>
+      !paths.some(other => other.length < p.length && other.every((v, i) => v === p[i]))
+    )
+    const groups = new Map<string, number[][]>()
+    for (const path of topLevel) {
+      const parentKey = path.slice(0, -1).join(',')
+      if (!groups.has(parentKey)) groups.set(parentKey, [])
+      groups.get(parentKey)!.push(path)
+    }
+    const newParentPaths: string[] = []
+    for (const [, group] of groups) {
+      group.sort((a, b) => a[a.length - 1] - b[b.length - 1])
+      const firstIdx = group[0][group[0].length - 1]
+      if (firstIdx === 0) continue
+      newParentPaths.push([...group[0].slice(0, -1), firstIdx - 1].join(','))
+    }
+
+    setFolders((prev) => indentNodes(prev, paths))
     setExpandedPaths((prev) => {
       const next = new Set(prev)
-      next.add(precedingSiblingPath.join(','))
+      for (const p of newParentPaths) next.add(p)
       return next
     })
-    // Clear focused path — the node is now inside a different parent
     setFocusedPath(null)
+    setSelectedPaths([])
   }
 
-  const handleOutdent = useCallback((path: number[]) => {
-    setFolders((prev) => outdentNode(prev, path))
-    setFocusedPath(null)  // path changes after outdent
+  const handleOutdent = useCallback((paths: number[][]) => {
+    setFolders((prev) => outdentNodes(prev, paths))
+    setFocusedPath(null)
+    setSelectedPaths([])
   }, [])
 
   const handleAddSiblingAfter = (path: number[]) => {
@@ -241,7 +256,7 @@ export function TemplateEditor({
       {/* Tree area */}
       <ScrollArea className="flex-1 px-3 py-2">
         {template ? (
-          <div className="h-full min-h-full select-none">
+          <div className="flex-1 flex flex-col select-none">
             <FolderTree
               nodes={folders}
               selectedPaths={selectedPaths}
