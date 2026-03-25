@@ -1,0 +1,19 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sunset" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#DC2626"/>
+      <stop offset="50%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FBBF24"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- White background -->
+  <rect width="512" height="512" rx="108" fill="#FFFFFF"/>
+  
+  <!-- Folder shape - sunset gradient, ~20% larger than original -->
+  <path d="M102 362 L102 172 Q102 148 126 148 L186 148 Q210 148 222 163 L243 190 Q255 205 279 205 L386 205 Q410 205 410 229 L410 362 Q410 386 386 386 L126 386 Q102 386 102 362 Z" fill="url(#sunset)"/>
+  
+  <!-- Plus sign - white, scaled up -->
+  <line x1="256" y1="258" x2="256" y2="332" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/>
+  <line x1="219" y1="295" x2="293" y2="295" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/>
+</svg>

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { AppLayout } from './components/AppLayout'
 import { TemplateList } from './components/TemplateList'
 import { TemplateEditor } from './components/TemplateEditor'
+import { NewTemplateDialog } from './components/NewTemplateDialog'
 import {
   loadTemplates,
   saveTemplates,
@@ -56,15 +57,23 @@ export default function App() {
     [selectedId, confirmDiscard]
   )
 
+  const [newDialogOpen, setNewDialogOpen] = useState(false)
+  const [newDialogDefault, setNewDialogDefault] = useState('')
+
   const handleNewTemplate = useCallback(() => {
     if (!confirmDiscard()) return
-    const name = uniqueTemplateName(templates, 'New Template')
+    setNewDialogDefault(uniqueTemplateName(templates, 'New Template'))
+    setNewDialogOpen(true)
+  }, [templates, confirmDiscard])
+
+  const handleNewTemplateConfirm = useCallback((name: string) => {
+    setNewDialogOpen(false)
     const updated = addTemplate(templates, name)
     setTemplates(updated)
     setSelectedId(updated[updated.length - 1].id)
     setIsDirty(false)
     saveTemplates(updated)
-  }, [templates, confirmDiscard])
+  }, [templates])
 
   const handleSave = useCallback(
     (updated: Template) => {
@@ -144,6 +153,12 @@ export default function App() {
             onDirtyChange={setIsDirty}
           />
         }
+      />
+      <NewTemplateDialog
+        open={newDialogOpen}
+        defaultName={newDialogDefault}
+        onConfirm={handleNewTemplateConfirm}
+        onClose={() => setNewDialogOpen(false)}
       />
       <Toaster />
     </>
