@@ -10,6 +10,6 @@
     "fs:allow-mkdir",
     "fs:allow-exists",
     "dialog:allow-open",
-    "path:allow-resolve"
+    "core:path:allow-resolve"
   ]
 }
