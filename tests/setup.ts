@@ -1,5 +1,6 @@
 // tests/setup.ts
 import { vi } from 'vitest'
+import '@testing-library/jest-dom'
 
 // Tauri APIs are not available in jsdom — mock them globally
 vi.mock('@tauri-apps/plugin-fs', () => ({
