@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { AppLayout } from './components/AppLayout'
 import { TemplateList } from './components/TemplateList'
+import { TemplateEditor } from './components/TemplateEditor'
 import {
   loadTemplates,
   saveTemplates,
@@ -119,12 +120,6 @@ export default function App() {
 
   const selected = templates.find((t) => t.id === selectedId) ?? null
 
-  // TODO (Tasks 10–11): wire these props into TemplateEditor
-  void handleSave
-  void handleDelete
-  void handleDuplicate
-  void saveSignal
-
   return (
     <>
       <AppLayout
@@ -139,10 +134,15 @@ export default function App() {
           />
         }
         editor={
-          // TODO: Replace with <TemplateEditor> in Task 10
-          <div className="p-4 text-sm text-muted-foreground">
-            Editor placeholder — selected: {selected?.name ?? 'none'}
-          </div>
+          <TemplateEditor
+            template={selected}
+            templates={templates}
+            saveSignal={saveSignal}
+            onSave={handleSave}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            onDirtyChange={setIsDirty}
+          />
         }
       />
       <Toaster />
