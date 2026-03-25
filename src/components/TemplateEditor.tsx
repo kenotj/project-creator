@@ -40,11 +40,20 @@ function deleteNodeAt(nodes: FolderNode[], path: number[]): FolderNode[] {
   )
 }
 
+function uniqueSiblingName(siblings: FolderNode[], baseName: string): string {
+  const names = new Set(siblings.map((n) => n.name))
+  if (!names.has(baseName)) return baseName
+  let i = 2
+  while (names.has(`${baseName} ${i}`)) i++
+  return `${baseName} ${i}`
+}
+
 function duplicateNodeAt(nodes: FolderNode[], path: number[]): FolderNode[] {
   if (path.length === 1) {
     const target = nodes[path[0]]
     const copy = JSON.parse(JSON.stringify(target)) as FolderNode
-    copy.name = `${copy.name} Copy`
+    const baseName = `${copy.name} Copy`
+    copy.name = uniqueSiblingName(nodes, baseName)
     return [...nodes.slice(0, path[0] + 1), copy, ...nodes.slice(path[0] + 1)]
   }
   return nodes.map((n, i) =>
@@ -233,7 +242,13 @@ export function TemplateEditor({
           Remove
         </Button>
         <div className="flex-1" />
-        {template && <GenerateProjectButton template={{ ...template, name, folders }} />}
+        {template ? (
+          <GenerateProjectButton template={{ ...template, name, folders }} />
+        ) : (
+          <Button size="sm" disabled>
+            Create Project
+          </Button>
+        )}
       </div>
     </div>
   )

@@ -27,6 +27,7 @@ interface NodeItemProps {
   node: FolderNode
   path: number[]
   selectedPath: number[] | null
+  siblingNames: string[]
   onSelect: (path: number[]) => void
   onAddSubfolder: (path: number[]) => void
   onRename: (path: number[], newName: string) => void
@@ -39,7 +40,7 @@ function pathsEqual(a: number[] | null, b: number[]): boolean {
 }
 
 function NodeItem({
-  node, path, selectedPath,
+  node, path, selectedPath, siblingNames,
   onSelect, onAddSubfolder, onRename, onDuplicate, onDelete
 }: NodeItemProps) {
   const [isOpen, setIsOpen] = useState(true)
@@ -76,6 +77,10 @@ function NodeItem({
     const result = validateName(renameValue)
     if (!result.valid) {
       setRenameError(result.error ?? 'Invalid name')
+      return
+    }
+    if (siblingNames.includes(renameValue.trim())) {
+      setRenameError('A folder with this name already exists')
       return
     }
     onRename(path, renameValue.trim())
@@ -171,10 +176,11 @@ function NodeItem({
         <div className="ml-4">
           {node.children.map((child, i) => (
             <NodeItem
-              key={child.name}
+              key={`${i}-${child.name}`}
               node={child}
               path={[...path, i]}
               selectedPath={selectedPath}
+              siblingNames={node.children.map(c => c.name).filter(n => n !== child.name)}
               onSelect={onSelect}
               onAddSubfolder={onAddSubfolder}
               onRename={onRename}
@@ -203,10 +209,11 @@ export function FolderTree({
     <div className="space-y-0.5">
       {nodes.map((node, i) => (
         <NodeItem
-          key={node.name}
+          key={`${i}-${node.name}`}
           node={node}
           path={[i]}
           selectedPath={selectedPath}
+          siblingNames={nodes.map(n => n.name).filter(n => n !== node.name)}
           onSelect={onSelect}
           onAddSubfolder={onAddSubfolder}
           onRename={onRename}
