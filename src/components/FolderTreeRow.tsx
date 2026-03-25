@@ -27,6 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import { validateName } from '@/lib/validation'
 import type { FolderNode } from '@/lib/models'
@@ -39,6 +41,8 @@ export interface FolderTreeRowProps {
   isFocused: boolean
   isEditing: boolean
   isExpanded: boolean
+  isDragSource?: boolean
+  isDropTarget?: boolean
   siblingNames: string[]
   onSelect: (paths: string[]) => void
   onShiftSelect: (clickedPath: number[]) => void
@@ -59,6 +63,8 @@ export function FolderTreeRow({
   isFocused,
   isEditing,
   isExpanded,
+  isDragSource,
+  isDropTarget,
   siblingNames,
   onSelect,
   onShiftSelect,
@@ -77,6 +83,16 @@ export function FolderTreeRow({
   const pathStr = path.join(',')
   const isSelected = selectedPaths.includes(pathStr)
   const hasChildren = node.children.length > 0
+
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: pathStr,
+  })
+
+  const style = {
+    paddingLeft: `${depth * 24}px`,
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
 
   useEffect(() => {
     if (isEditing) {
@@ -116,13 +132,17 @@ export function FolderTreeRow({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
+          ref={setNodeRef}
+          {...attributes}
           className={cn(
             'group/row flex items-center h-8 rounded-md cursor-pointer select-none text-sm transition-colors',
             isFocused || isSelected
               ? 'bg-accent'
-              : 'hover:bg-accent/50'
+              : 'hover:bg-accent/50',
+            isDragSource && 'opacity-50',
+            isDropTarget && 'ring-2 ring-primary bg-primary/10'
           )}
-          style={{ paddingLeft: `${depth * 24}px` }}
+          style={style}
           data-path={pathStr}
           onClick={(e) => {
             e.stopPropagation()
@@ -143,7 +163,11 @@ export function FolderTreeRow({
         >
           {/* Left gutter: chevron / grip swap */}
           {hasChildren ? (
-            <div className="relative w-5 h-full flex-shrink-0">
+            <div
+              className="relative w-5 h-full flex-shrink-0"
+              {...listeners}
+              data-drag-handle
+            >
               {/* Chevron - default visible, hidden on row hover */}
               <button
                 type="button"
@@ -165,7 +189,16 @@ export function FolderTreeRow({
               </div>
             </div>
           ) : (
-            <div className="w-5 flex-shrink-0" />
+            <div
+              className="relative w-5 h-full flex-shrink-0"
+              {...listeners}
+              data-drag-handle
+            >
+              {/* For leaf nodes: show grip on hover, no chevron */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab">
+                <GripVertical className="w-3 h-3 text-muted-foreground" />
+              </div>
+            </div>
           )}
 
           {/* Folder icon */}

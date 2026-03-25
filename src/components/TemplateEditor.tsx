@@ -145,12 +145,9 @@ export function TemplateEditor({
     }
   }
 
-  // Reserved for Phase 4 drag-and-drop; not wired as a prop yet
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleMove = (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => {
+  const handleMove = useCallback((fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => {
     setFolders((prev) => moveNode(prev, fromPath, toPath, position))
-  }
-  void handleMove // suppress noUnusedLocals until Phase 4
+  }, [])
 
   const handleIndent = (path: number[]) => {
     const lastIdx = path[path.length - 1]
@@ -261,6 +258,7 @@ export function TemplateEditor({
               onDelete={handleDeleteNodes}
               onIndent={handleIndent}
               onOutdent={handleOutdent}
+              onMove={handleMove}
             />
           </div>
         ) : (

@@ -1,8 +1,30 @@
 // src/components/FolderTree.tsx
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Fragment } from 'react'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragOverEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable'
 import { FolderTreeRow } from './FolderTreeRow'
+import { FolderTreeDragOverlay } from './FolderTreeDragOverlay'
 import { getVisiblePaths, getNodeAtPath, getSiblingsAtPath } from '@/lib/tree-operations'
 import type { FolderNode } from '@/lib/models'
+
+function isAncestorOf(ancestor: number[], descendant: number[]): boolean {
+  return ancestor.length < descendant.length &&
+    ancestor.every((v, i) => v === descendant[i])
+}
 
 interface FolderTreeProps {
   nodes: FolderNode[]
@@ -21,16 +43,97 @@ interface FolderTreeProps {
   onDelete: (paths: string[]) => void
   onIndent: (path: number[]) => void
   onOutdent: (path: number[]) => void
+  onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
 }
 
 export function FolderTree({
   nodes, selectedPaths, focusedPath, editingPath, expandedPaths,
   onSelect, onFocusChange, onEditingChange, onToggleExpand,
   onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete,
-  onIndent, onOutdent
+  onIndent, onOutdent, onMove
 }: FolderTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
+
+  // DnD state
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<{
+    path: number[]
+    position: 'before' | 'after' | 'inside'
+  } | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string)
+    // If currently editing, commit rename first
+    if (editingPath !== null) {
+      onEditingChange(null)
+    }
+  }
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) {
+      setDropTarget(null)
+      return
+    }
+
+    const overPath = (over.id as string).split(',').map(Number)
+    const activePath = (active.id as string).split(',').map(Number)
+
+    // Prevent dropping on self or descendants
+    if (isAncestorOf(activePath, overPath)) {
+      setDropTarget(null)
+      return
+    }
+
+    // Get pointer position from the native event + delta
+    const nativeEvent = event.activatorEvent as PointerEvent
+    const startY = nativeEvent.clientY
+    const currentY = startY + event.delta.y
+
+    const overRect = over.rect
+    const relY = currentY - overRect.top
+    const fraction = relY / overRect.height
+
+    let position: 'before' | 'after' | 'inside'
+    if (fraction < 0.25) {
+      position = 'before'
+    } else if (fraction > 0.75) {
+      position = 'after'
+    } else {
+      position = 'inside'
+    }
+
+    setDropTarget({ path: overPath, position })
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveDragId(null)
+
+    if (!over || !dropTarget) {
+      setDropTarget(null)
+      return
+    }
+
+    const fromPath = (active.id as string).split(',').map(Number)
+    onMove(fromPath, dropTarget.path, dropTarget.position)
+
+    // Auto-expand if dropped inside a collapsed folder
+    if (dropTarget.position === 'inside') {
+      const targetKey = dropTarget.path.join(',')
+      if (!expandedPaths.has(targetKey)) {
+        onToggleExpand(dropTarget.path)
+      }
+    }
+
+    setDropTarget(null)
+  }
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -39,7 +142,7 @@ export function FolderTree({
       // Only start marquee if clicking empty area or container itself
       if (e.button !== 0) return
       const target = e.target as HTMLElement
-      if (target.closest('button') || target.closest('input')) return
+      if (target.closest('button') || target.closest('input') || target.closest('[data-drag-handle]')) return
 
       const rect = containerRef.current!.getBoundingClientRect()
       const startX = e.clientX - rect.left
@@ -240,59 +343,103 @@ export function FolderTree({
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {nodes.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-          No folders yet. Use "+ Folder" to add one.
-        </div>
-      ) : (
-        <div className="space-y-0.5">
-          {visibleNodes.map(({ path, depth, node }) => {
-            const pathStr = path.join(',')
-            const siblings = getSiblingsAtPath(nodes, path)
-            const siblingNames = siblings
-              .filter((_, i) => i !== path[path.length - 1])
-              .map((s) => s.name)
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={visibleNodes.map(({ path }) => path.join(','))}
+          strategy={verticalListSortingStrategy}
+        >
+          {nodes.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+              No folders yet. Use &quot;+ Folder&quot; to add one.
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {visibleNodes.map(({ path, depth, node }) => {
+                const pathStr = path.join(',')
+                const siblings = getSiblingsAtPath(nodes, path)
+                const siblingNames = siblings
+                  .filter((_, i) => i !== path[path.length - 1])
+                  .map((s) => s.name)
 
-            return (
-              <FolderTreeRow
-                key={`${pathStr}-${node.name}`}
-                node={node}
-                path={path}
-                depth={depth}
-                selectedPaths={selectedPaths}
-                isFocused={focusedPath !== null && focusedPath.join(',') === pathStr}
-                isEditing={editingPath !== null && editingPath.join(',') === pathStr}
-                isExpanded={expandedPaths.has(pathStr)}
-                siblingNames={siblingNames}
-                onSelect={onSelect}
-                onShiftSelect={(clickedPath) => {
-                  const visible = getVisiblePaths(nodes, expandedPaths)
-                  const clickedIdx = visible.findIndex(v => v.path.join(',') === clickedPath.join(','))
-                  if (selectedPaths.length === 0 || clickedIdx === -1) {
-                    onSelect([clickedPath.join(',')])
-                    return
-                  }
-                  // Find anchor — use first selected item or focused path
-                  const anchor = focusedPath ?? (selectedPaths[0] ? selectedPaths[0].split(',').map(Number) : null)
-                  const anchorIdx = anchor ? visible.findIndex(v => v.path.join(',') === anchor.join(',')) : -1
-                  if (anchorIdx === -1) { onSelect([clickedPath.join(',')]); return }
-                  const start = Math.min(anchorIdx, clickedIdx)
-                  const end = Math.max(anchorIdx, clickedIdx)
-                  const range = visible.slice(start, end + 1).map(v => v.path.join(','))
-                  onSelect(range)
-                }}
-                onFocusChange={onFocusChange}
-                onEditingChange={onEditingChange}
-                onToggleExpand={onToggleExpand}
-                onAddSubfolder={onAddSubfolder}
-                onRename={onRename}
-                onDuplicate={onDuplicate}
-                onDelete={onDelete}
-              />
-            )
-          })}
-        </div>
-      )}
+                const isDropTargetInside = dropTarget?.position === 'inside' &&
+                  dropTarget.path.join(',') === pathStr
+
+                return (
+                  <Fragment key={`${pathStr}-${node.name}`}>
+                    {/* Drop indicator: blue line BEFORE this row */}
+                    {dropTarget?.position === 'before' &&
+                     dropTarget.path.join(',') === pathStr && (
+                      <div
+                        className="h-0.5 bg-primary rounded-full mx-2"
+                        style={{ marginLeft: `${depth * 24 + 8}px` }}
+                      />
+                    )}
+
+                    <FolderTreeRow
+                      node={node}
+                      path={path}
+                      depth={depth}
+                      selectedPaths={selectedPaths}
+                      isFocused={focusedPath !== null && focusedPath.join(',') === pathStr}
+                      isEditing={editingPath !== null && editingPath.join(',') === pathStr}
+                      isExpanded={expandedPaths.has(pathStr)}
+                      isDragSource={activeDragId === pathStr}
+                      isDropTarget={isDropTargetInside}
+                      siblingNames={siblingNames}
+                      onSelect={onSelect}
+                      onShiftSelect={(clickedPath) => {
+                        const visible = getVisiblePaths(nodes, expandedPaths)
+                        const clickedIdx = visible.findIndex(v => v.path.join(',') === clickedPath.join(','))
+                        if (selectedPaths.length === 0 || clickedIdx === -1) {
+                          onSelect([clickedPath.join(',')])
+                          return
+                        }
+                        // Find anchor — use first selected item or focused path
+                        const anchor = focusedPath ?? (selectedPaths[0] ? selectedPaths[0].split(',').map(Number) : null)
+                        const anchorIdx = anchor ? visible.findIndex(v => v.path.join(',') === anchor.join(',')) : -1
+                        if (anchorIdx === -1) { onSelect([clickedPath.join(',')]); return }
+                        const start = Math.min(anchorIdx, clickedIdx)
+                        const end = Math.max(anchorIdx, clickedIdx)
+                        const range = visible.slice(start, end + 1).map(v => v.path.join(','))
+                        onSelect(range)
+                      }}
+                      onFocusChange={onFocusChange}
+                      onEditingChange={onEditingChange}
+                      onToggleExpand={onToggleExpand}
+                      onAddSubfolder={onAddSubfolder}
+                      onRename={onRename}
+                      onDuplicate={onDuplicate}
+                      onDelete={onDelete}
+                    />
+
+                    {/* Drop indicator: blue line AFTER this row */}
+                    {dropTarget?.position === 'after' &&
+                     dropTarget.path.join(',') === pathStr && (
+                      <div
+                        className="h-0.5 bg-primary rounded-full mx-2"
+                        style={{ marginLeft: `${depth * 24 + 8}px` }}
+                      />
+                    )}
+                  </Fragment>
+                )
+              })}
+            </div>
+          )}
+        </SortableContext>
+
+        <DragOverlay>
+          {activeDragId ? (() => {
+            const draggedVisible = visibleNodes.find(v => v.path.join(',') === activeDragId)
+            if (!draggedVisible) return null
+            return <FolderTreeDragOverlay node={draggedVisible.node} depth={draggedVisible.depth} />
+          })() : null}
+        </DragOverlay>
+      </DndContext>
 
       {marquee && (
         <div
