@@ -255,7 +255,7 @@ export function FolderTree({
 
             return (
               <FolderTreeRow
-                key={pathStr}
+                key={`${pathStr}-${node.name}`}
                 node={node}
                 path={path}
                 depth={depth}
@@ -265,6 +265,22 @@ export function FolderTree({
                 isExpanded={expandedPaths.has(pathStr)}
                 siblingNames={siblingNames}
                 onSelect={onSelect}
+                onShiftSelect={(clickedPath) => {
+                  const visible = getVisiblePaths(nodes, expandedPaths)
+                  const clickedIdx = visible.findIndex(v => v.path.join(',') === clickedPath.join(','))
+                  if (selectedPaths.length === 0 || clickedIdx === -1) {
+                    onSelect([clickedPath.join(',')])
+                    return
+                  }
+                  // Find anchor — use first selected item or focused path
+                  const anchor = focusedPath ?? (selectedPaths[0] ? selectedPaths[0].split(',').map(Number) : null)
+                  const anchorIdx = anchor ? visible.findIndex(v => v.path.join(',') === anchor.join(',')) : -1
+                  if (anchorIdx === -1) { onSelect([clickedPath.join(',')]); return }
+                  const start = Math.min(anchorIdx, clickedIdx)
+                  const end = Math.max(anchorIdx, clickedIdx)
+                  const range = visible.slice(start, end + 1).map(v => v.path.join(','))
+                  onSelect(range)
+                }}
                 onFocusChange={onFocusChange}
                 onEditingChange={onEditingChange}
                 onToggleExpand={onToggleExpand}

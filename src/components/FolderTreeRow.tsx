@@ -41,6 +41,7 @@ export interface FolderTreeRowProps {
   isExpanded: boolean
   siblingNames: string[]
   onSelect: (paths: string[]) => void
+  onShiftSelect: (clickedPath: number[]) => void
   onFocusChange: (path: number[] | null) => void
   onEditingChange: (path: number[] | null) => void
   onToggleExpand: (path: number[]) => void
@@ -60,6 +61,7 @@ export function FolderTreeRow({
   isExpanded,
   siblingNames,
   onSelect,
+  onShiftSelect,
   onFocusChange,
   onEditingChange,
   onToggleExpand,
@@ -131,8 +133,8 @@ export function FolderTreeRow({
                   ? selectedPaths.filter((p) => p !== pathStr)
                   : [...selectedPaths, pathStr]
               )
-            } else if (e.shiftKey && selectedPaths.length > 0) {
-              onSelect([pathStr])
+            } else if (e.shiftKey) {
+              onShiftSelect(path)
             } else {
               onSelect([pathStr])
             }
@@ -168,9 +170,9 @@ export function FolderTreeRow({
 
           {/* Folder icon */}
           {isExpanded && hasChildren ? (
-            <FolderOpenIcon className="w-4 h-4 flex-shrink-0 text-amber-500 mr-1.5" />
+            <FolderOpenIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-1.5" />
           ) : (
-            <FolderIcon className="w-4 h-4 flex-shrink-0 text-amber-500 mr-1.5" />
+            <FolderIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-1.5" />
           )}
 
           {/* Name / input */}
