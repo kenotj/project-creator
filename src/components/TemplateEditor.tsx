@@ -258,6 +258,7 @@ export function TemplateEditor({
         {template ? (
           <div className="flex-1 flex flex-col select-none">
             <FolderTree
+              templateName={name}
               nodes={folders}
               selectedPaths={selectedPaths}
               focusedPath={focusedPath}
