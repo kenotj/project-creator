@@ -6,11 +6,13 @@ import { Input } from './ui/input'
 import { ScrollArea } from './ui/scroll-area'
 import { FolderTree } from './FolderTree'
 import { GenerateDialog } from './GenerateDialog'
+import { DeleteTemplateDialog } from './DeleteTemplateDialog'
 import { validateName } from '@/lib/validation'
 import type { Template, FolderNode } from '@/lib/models'
 import {
   addNodeAt, renameNodeAt, deleteNodeAt, duplicateNodeAt,
-  insertNodeAfter, moveNode, indentNodes, outdentNodes
+  insertNodeAfter, moveNode, indentNodes, outdentNodes,
+  getNodeAtPath, getSiblingsAtPath, uniqueSiblingName
 } from '@/lib/tree-operations'
 import { cn } from '@/lib/utils'
 
@@ -51,6 +53,7 @@ export function TemplateEditor({
   const [focusedPath, setFocusedPath] = useState<number[] | null>(null)
   const [editingPath, setEditingPath] = useState<number[] | null>(null)
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   // Reset local state when selected template changes
   useEffect(() => {
@@ -107,16 +110,55 @@ export function TemplateEditor({
   }
 
   const handleDuplicateNodes = (paths: string[]) => {
-    // Sort paths to avoid indexing issues during mutation
-    const sortedPaths = [...paths].map(p => p.split(',').map(Number)).sort((a, b) => {
-      if (a.length !== b.length) return b.length - a.length // deeper first
-      return b[b.length - 1] - a[a.length - 1] // higher index first
-    })
+    if (paths.length === 1) {
+      // Single node: insert copy right after the original
+      const path = paths[0].split(',').map(Number)
+      setFolders((prev) => duplicateNodeAt(prev, path))
+      return
+    }
+
+    // Multi-select: group by parent, insert all copies after the last selected sibling
+    const parsed = paths.map(p => p.split(',').map(Number))
+    const groups = new Map<string, number[][]>()
+    for (const path of parsed) {
+      const parentKey = path.slice(0, -1).join(',')
+      if (!groups.has(parentKey)) groups.set(parentKey, [])
+      groups.get(parentKey)!.push(path)
+    }
 
     setFolders((prev) => {
-      let current = [...prev]
-      for (const path of sortedPaths) {
-        current = duplicateNodeAt(current, path)
+      let current = prev
+      // Process deepest groups first to avoid path invalidation
+      const sortedGroups = [...groups.entries()].sort((a, b) => {
+        const depthA = a[0] === '' ? 0 : a[0].split(',').length
+        const depthB = b[0] === '' ? 0 : b[0].split(',').length
+        return depthB - depthA
+      })
+
+      for (const [, group] of sortedGroups) {
+        group.sort((a, b) => a[a.length - 1] - b[b.length - 1])
+        const lastIdx = group[group.length - 1][group[group.length - 1].length - 1]
+        const parentPath = group[0].slice(0, -1)
+        const siblings = parentPath.length === 0 ? current : getSiblingsAtPath(current, group[0])
+
+        // Collect copies with unique names
+        const copies: FolderNode[] = []
+        for (const path of group) {
+          const node = getNodeAtPath(current, path)
+          if (!node) continue
+          const copy = JSON.parse(JSON.stringify(node)) as FolderNode
+          const baseName = `${copy.name} Copy`
+          copy.name = uniqueSiblingName(
+            [...siblings, ...copies],
+            baseName
+          )
+          copies.push(copy)
+        }
+
+        // Insert all copies after the last selected node
+        for (let i = copies.length - 1; i >= 0; i--) {
+          current = insertNodeAfter(current, [...parentPath, lastIdx], copies[i])
+        }
       }
       return current
     })
@@ -216,13 +258,19 @@ export function TemplateEditor({
       {/* Toolbar — only shown when template exists */}
       {template && (
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-          <div className="flex flex-col">
-            <Input
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              className={cn('h-8 w-44 text-sm', nameError && 'border-red-500')}
-            />
+          <div className="flex items-center gap-2">
+            <label htmlFor="template-name" className="text-sm text-muted-foreground whitespace-nowrap">
+              Template Name
+            </label>
+            <div className="flex flex-col">
+              <Input
+                id="template-name"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                className={cn('h-8 w-44 text-sm', nameError && 'border-red-500')}
+              />
             {nameError && <span className="text-xs text-red-500 mt-0.5">{nameError}</span>}
+            </div>
           </div>
           <div className="flex items-center gap-1 ml-1 animate-in fade-in slide-in-from-left-1 duration-200">
             <Button
@@ -230,7 +278,7 @@ export function TemplateEditor({
               size="icon"
               className="h-8 w-8"
               onClick={() => onDuplicate(template.id)}
-              title="Duplicate"
+              title="Duplicate template"
             >
               <CopyIcon className="w-3.5 h-3.5" />
             </Button>
@@ -238,8 +286,8 @@ export function TemplateEditor({
               variant="outline"
               size="icon"
               className="h-8 w-8 text-red-500 border-red-200 hover:bg-red-50 dark:hover:bg-red-950"
-              onClick={() => onDelete(template.id)}
-              title="Delete"
+              onClick={() => setShowDeleteDialog(true)}
+              title="Delete template"
             >
               <Trash2Icon className="w-3.5 h-3.5" />
             </Button>
@@ -249,7 +297,7 @@ export function TemplateEditor({
               className="h-8 w-8"
               onClick={handleSave}
               disabled={!canSave}
-              title="Save"
+              title="Save template"
             >
               <SaveIcon className="w-3.5 h-3.5" />
             </Button>
@@ -338,6 +386,17 @@ export function TemplateEditor({
           </Button>
         )}
       </div>
+      {template && (
+        <DeleteTemplateDialog
+          open={showDeleteDialog}
+          templateName={name}
+          onConfirm={() => {
+            setShowDeleteDialog(false)
+            onDelete(template.id)
+          }}
+          onCancel={() => setShowDeleteDialog(false)}
+        />
+      )}
     </div>
   )
 }

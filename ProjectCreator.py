@@ -19,7 +19,7 @@ class FolderNode:
     children: List["FolderNode"] = field(default_factory=list)
 
     def to_dict(self) -> dict:
-        return {"name": self.name, "children": [c.to_dict() for c in self.children]}
+        return {"name": self.name, "children": [c.to_dict() for c in self.children]}it
 
     @staticmethod
     def from_dict(d: dict) -> "FolderNode":

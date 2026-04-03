@@ -30,4 +30,6 @@ src-tauri/icons/ios/
 .superpowers/
 
 # Claude Code local settings
-.claude/settings.json
+.claude/*
+.playwright-mcp/*
+docs/*
