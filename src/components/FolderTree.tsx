@@ -49,6 +49,31 @@ interface FolderTreeProps {
   onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
 }
 
+export function computeMarqueeHits(
+  marquee: { x1: number; y1: number; x2: number; y2: number },
+  containerEl: HTMLDivElement,
+  containerRect: DOMRect
+): string[] {
+  const items = containerEl.querySelectorAll('[data-path]')
+  const hits: string[] = []
+  items.forEach((item) => {
+    const r = item.getBoundingClientRect()
+    const rel = {
+      left: r.left - containerRect.left,
+      top: r.top - containerRect.top,
+      right: r.right - containerRect.left,
+      bottom: r.bottom - containerRect.top,
+    }
+    if (
+      rel.left < marquee.x2 && rel.right > marquee.x1 &&
+      rel.top < marquee.y2 && rel.bottom > marquee.y1
+    ) {
+      hits.push(item.getAttribute('data-path')!)
+    }
+  })
+  return hits
+}
+
 export function FolderTree({
   templateName, nodes, selectedPaths, focusedPath, editingPath, expandedPaths,
   onSelect, onFocusChange, onEditingChange, onToggleExpand,
@@ -57,6 +82,7 @@ export function FolderTree({
 }: FolderTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
+  const [previewPaths, setPreviewPaths] = useState<string[]>([])
   const [isRootExpanded, setIsRootExpanded] = useState(true)
   const [isRootFocused, setIsRootFocused] = useState(false)
 
@@ -178,44 +204,22 @@ export function FolderTree({
       const handleMouseMove = (moveEvent: MouseEvent) => {
         const currentX = moveEvent.clientX - rect.left
         const currentY = moveEvent.clientY - rect.top
-        setMarquee({
+        const newMarquee = {
           x1: Math.min(startX, currentX),
           y1: Math.min(startY, currentY),
           x2: Math.max(startX, currentX),
-          y2: Math.max(startY, currentY)
-        })
+          y2: Math.max(startY, currentY),
+        }
+        setMarquee(newMarquee)
+        setPreviewPaths(computeMarqueeHits(newMarquee, containerRef.current!, rect))
       }
 
       const handleMouseUp = (upEvent: MouseEvent) => {
         setMarquee((currentMarquee) => {
           if (currentMarquee) {
-            // Hit detection
-            const selected: string[] = []
-            const items = containerRef.current!.querySelectorAll('[data-path]')
-            const containerRect = containerRef.current!.getBoundingClientRect()
-
-            items.forEach((item) => {
-              const itemRect = item.getBoundingClientRect()
-              const relativeItemRect = {
-                left: itemRect.left - containerRect.left,
-                top: itemRect.top - containerRect.top,
-                right: itemRect.right - containerRect.left,
-                bottom: itemRect.bottom - containerRect.top
-              }
-
-              if (
-                relativeItemRect.left < currentMarquee.x2 &&
-                relativeItemRect.right > currentMarquee.x1 &&
-                relativeItemRect.top < currentMarquee.y2 &&
-                relativeItemRect.bottom > currentMarquee.y1
-              ) {
-                selected.push(item.getAttribute('data-path')!)
-              }
-            })
-
+            const selected = computeMarqueeHits(currentMarquee, containerRef.current!, rect)
             if (selected.length > 0) {
               if (upEvent.metaKey || upEvent.ctrlKey) {
-                // Toggle/Append
                 const newSelection = new Set([...selectedPaths, ...selected])
                 onSelect(Array.from(newSelection))
               } else {
@@ -235,6 +239,7 @@ export function FolderTree({
           }
           return null
         })
+        setPreviewPaths([])   // always clear, outside the functional updater
         window.removeEventListener('mousemove', handleMouseMove)
         window.removeEventListener('mouseup', handleMouseUp)
       }
@@ -542,6 +547,7 @@ export function FolderTree({
                         isExpanded={expandedPaths.has(pathStr)}
                         isDragSource={activeDragId === pathStr}
                         isDropTarget={isDropTargetInside}
+                        isPreview={previewPaths.includes(pathStr)}
                         siblingNames={siblingNames}
                         onSelect={onSelect}
                         onShiftSelect={(clickedPath) => {
