@@ -28,7 +28,6 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
 import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import { validateName } from '@/lib/validation'
 import type { FolderNode } from '@/lib/models'
@@ -86,14 +85,12 @@ export function FolderTreeRow({
   const isSelected = selectedPaths.includes(pathStr)
   const hasChildren = node.children.length > 0
 
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+  const { attributes, listeners, setNodeRef } = useSortable({
     id: pathStr,
   })
 
   const style = {
     // padding is done via spacer divs for better control
-    transform: CSS.Transform.toString(transform),
-    transition,
   }
 
   useEffect(() => {

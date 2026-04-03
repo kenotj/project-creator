@@ -11,10 +11,6 @@ import {
   type DragOverEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
 import { ChevronRight, ChevronDown, FolderIcon, FolderOpenIcon, Plus } from 'lucide-react'
 import { FolderTreeRow } from './FolderTreeRow'
 import { FolderTreeDragOverlay } from './FolderTreeDragOverlay'
@@ -157,6 +153,16 @@ export function FolderTree({
       position = 'after'
     } else {
       position = 'inside'
+    }
+
+    if (position === 'after') {
+      const overNode = getNodeAtPath(nodes, overPath)
+      if (overNode && overNode.children.length > 0 && expandedPaths.has(overPath.join(','))) {
+        const newDropTarget = { path: [...overPath, 0], position: 'before' as const }
+        setDropTarget(newDropTarget)
+        dropTargetRef.current = newDropTarget
+        return
+      }
     }
 
     const newDropTarget = { path: overPath, position }
@@ -518,12 +524,7 @@ export function FolderTree({
           </ContextMenuContent>
         </ContextMenu>
 
-        {/* Children — hidden when root collapsed, keep mounted to preserve sortable registrations */}
         <div className={cn(!isRootExpanded && 'hidden')}>
-          <SortableContext
-            items={visibleNodes.map(({ path }) => path.join(','))}
-            strategy={verticalListSortingStrategy}
-          >
             {nodes.length === 0 ? (
               <div className="flex items-center h-8 text-sm text-muted-foreground pl-12">
                 No folders yet.
@@ -603,7 +604,6 @@ export function FolderTree({
                 })}
               </div>
             )}
-          </SortableContext>
         </div>
 
         <DragOverlay>
