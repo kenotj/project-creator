@@ -448,7 +448,7 @@ export function FolderTree({
               ref={setRootDropRef}
               data-root-row
               className={cn(
-                'flex items-center h-8 cursor-pointer select-none text-sm',
+                'group/root-row flex items-center h-8 cursor-pointer select-none text-sm',
                 isRootFocused && 'bg-accent/30',
                 isRootDropOver && activeDragId && 'ring-2 ring-primary bg-primary/10'
               )}
@@ -484,7 +484,7 @@ export function FolderTree({
               </div>
 
               {/* Content */}
-              <div className="flex-1 flex items-center h-[90%] rounded-sm px-2 mr-2">
+              <div className="flex-1 flex items-center h-[90%] rounded-sm px-2">
                 {isRootExpanded ? (
                   <FolderOpenIcon className="w-4 h-4 flex-shrink-0 text-amber-500 dark:text-amber-400 mr-2" />
                 ) : (
@@ -494,6 +494,20 @@ export function FolderTree({
                   &lt;{templateName}&gt;
                 </span>
               </div>
+
+              {/* Add folder button */}
+              <button
+                type="button"
+                className="opacity-0 group-hover/root-row:opacity-100 transition-opacity flex items-center justify-center w-6 h-6 mr-2 rounded hover:bg-accent text-muted-foreground hover:text-foreground flex-shrink-0"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAddSubfolder([])
+                }}
+                title="Add folder"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent className="w-44">
