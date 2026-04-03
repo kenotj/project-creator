@@ -21,15 +21,15 @@ const [previewPaths, setPreviewPaths] = useState<string[]>([])
 
 ### Extracted helper
 
-Extract the hit-detection logic that currently lives inside the `handleMouseUp` closure into a standalone helper inside `FolderTree`:
+Extract the hit-detection logic that currently lives inside the `handleMouseUp` closure into a standalone helper inside `FolderTree`. The helper accepts the mousedown-captured `rect` so that the coordinate system matches the marquee values (which are also computed relative to that same `rect`):
 
 ```ts
 function computeMarqueeHits(
   marquee: { x1: number; y1: number; x2: number; y2: number },
-  containerRef: React.RefObject<HTMLDivElement>
+  containerEl: HTMLDivElement,
+  containerRect: DOMRect
 ): string[] {
-  const items = containerRef.current!.querySelectorAll('[data-path]')
-  const containerRect = containerRef.current!.getBoundingClientRect()
+  const items = containerEl.querySelectorAll('[data-path]')
   const hits: string[] = []
   items.forEach((item) => {
     const r = item.getBoundingClientRect()
@@ -48,20 +48,60 @@ function computeMarqueeHits(
 }
 ```
 
+The `rect` passed in is the one already captured at the top of `handleMouseDown` (i.e. `containerRef.current!.getBoundingClientRect()`), the same value used to compute `startX/startY` and the marquee coordinates.
+
 ### `handleMouseMove`
 
-After updating `marquee` state, also call:
+After computing the new marquee values, call the helper and update preview state. Both `setMarquee` and `setPreviewPaths` are called in the same `window` `mousemove` listener. React 18 batches state updates automatically — including those from non-synthetic event listeners — so this produces a single re-render per frame.
 
 ```ts
-setPreviewPaths(computeMarqueeHits(newMarquee, containerRef))
+const handleMouseMove = (moveEvent: MouseEvent) => {
+  const currentX = moveEvent.clientX - rect.left
+  const currentY = moveEvent.clientY - rect.top
+  const newMarquee = {
+    x1: Math.min(startX, currentX),
+    y1: Math.min(startY, currentY),
+    x2: Math.max(startX, currentX),
+    y2: Math.max(startY, currentY),
+  }
+  setMarquee(newMarquee)
+  setPreviewPaths(computeMarqueeHits(newMarquee, containerRef.current!, rect))
+}
 ```
 
 ### `handleMouseUp`
 
-Replace the inline hit-detection with a call to `computeMarqueeHits`. After committing selection (or on no-drag mouseup), clear preview:
+The existing `handleMouseUp` uses a functional updater `setMarquee((currentMarquee) => { ... })` to read the latest marquee without a stale-closure issue. Replace the inline hit-detection inside that updater with `computeMarqueeHits`. After the `setMarquee(...)` call (i.e. outside the functional updater), call `setPreviewPaths([])` to clear the preview:
 
 ```ts
-setPreviewPaths([])
+const handleMouseUp = (upEvent: MouseEvent) => {
+  setMarquee((currentMarquee) => {
+    if (currentMarquee) {
+      const selected = computeMarqueeHits(currentMarquee, containerRef.current!, rect)
+      if (selected.length > 0) {
+        if (upEvent.metaKey || upEvent.ctrlKey) {
+          onSelect(Array.from(new Set([...selectedPaths, ...selected])))
+        } else {
+          onSelect(selected)
+        }
+      } else {
+        onSelect([])
+      }
+    } else {
+      // No drag — simple click on empty area
+      const upTarget = upEvent.target as HTMLElement
+      if (!upTarget.closest('[data-path]') && !upTarget.closest('[data-root-row]')) {
+        onSelect([])
+        onFocusChange(null)
+        setIsRootFocused(false)
+      }
+    }
+    return null
+  })
+  setPreviewPaths([])   // always clear, called outside the functional updater
+  window.removeEventListener('mousemove', handleMouseMove)
+  window.removeEventListener('mouseup', handleMouseUp)
+}
 ```
 
 ### `FolderTreeRow` — new prop
@@ -86,6 +126,8 @@ When rendering each `FolderTreeRow`:
 isPreview={previewPaths.includes(pathStr)}
 ```
 
+`previewPaths.includes` is O(n) and `FolderTreeRow` renders once per visible node, making hit checks O(n²) per mousemove frame. For typical folder trees (< 100 nodes) this is negligible and no optimisation is needed.
+
 ## Files Changed
 
 | File | Change |
@@ -96,6 +138,6 @@ isPreview={previewPaths.includes(pathStr)}
 ## Behaviour Notes
 
 - `previewPaths` is always cleared on mouseup regardless of whether a marquee was drawn.
-- Preview is only active while the marquee rectangle exists (`marquee !== null`). The mousemove handler only fires when a drag is in progress so no extra guard is needed.
-- Modifier key behaviour (cmd/ctrl append) applies only at mouseup as today; preview always shows the raw hit set, not the merged set. This matches user expectation: "what would be selected if I released now."
+- Preview is only active while the marquee rectangle exists. The `mousemove` listener only fires during an active drag so no extra guard is needed.
+- Modifier key behaviour (cmd/ctrl append) applies only at mouseup as today; preview always shows the raw hit set, not the merged set. This matches the expectation: "what would be selected if I released now."
 - No changes to keyboard selection, DnD, or any other selection path.
