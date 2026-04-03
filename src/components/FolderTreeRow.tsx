@@ -43,6 +43,7 @@ export interface FolderTreeRowProps {
   isExpanded: boolean
   isDragSource?: boolean
   isDropTarget?: boolean
+  isPreview?: boolean
   siblingNames: string[]
   onSelect: (paths: string[]) => void
   onShiftSelect: (clickedPath: number[]) => void
@@ -65,6 +66,7 @@ export function FolderTreeRow({
   isExpanded,
   isDragSource,
   isDropTarget,
+  isPreview,
   siblingNames,
   onSelect,
   onShiftSelect,
@@ -192,7 +194,7 @@ export function FolderTreeRow({
           {/* Selectable Content Area (where the background lives) */}
           <div className={cn(
             'flex-1 flex items-center h-[90%] rounded-sm px-2 transition-colors mr-2',
-            isSelected || isFocused
+            isSelected || isFocused || isPreview
               ? 'bg-accent text-accent-foreground font-medium ring-1 ring-border/50 shadow-sm'
               : 'hover:bg-accent/40'
           )}>
