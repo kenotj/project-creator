@@ -20,7 +20,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from './ui/context-menu'
-import { getVisiblePaths, getNodeAtPath, getSiblingsAtPath, isAncestorOf } from '@/lib/tree-operations'
+import { getVisiblePaths, getNodeAtPath, getSiblingsAtPath, isAncestorOf, moveNodes } from '@/lib/tree-operations'
 import { cn } from '@/lib/utils'
 import type { FolderNode } from '@/lib/models'
 
@@ -43,6 +43,7 @@ interface FolderTreeProps {
   onIndent: (paths: number[][]) => void
   onOutdent: (paths: number[][]) => void
   onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
+  onMoveMultiple: (fromPaths: number[][], toPath: number[], position: 'before' | 'after' | 'inside') => void
 }
 
 export function computeMarqueeHits(
@@ -74,7 +75,7 @@ export function FolderTree({
   templateName, nodes, selectedPaths, focusedPath, editingPath, expandedPaths,
   onSelect, onFocusChange, onEditingChange, onToggleExpand,
   onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete,
-  onIndent, onOutdent, onMove
+  onIndent, onOutdent, onMove, onMoveMultiple
 }: FolderTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
@@ -100,6 +101,7 @@ export function FolderTree({
   const dropTargetRef = useRef<{ path: number[], position: 'before' | 'after' | 'inside' } | null>(null)
   const [ghostInfo, setGhostInfo] = useState<{ node: FolderNode; depth: number } | null>(null)
   const ghostClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isMultiDrag, setIsMultiDrag] = useState(false)
   const dragStartPointerY = useRef<number>(0)
 
   const sensors = useSensors(
@@ -128,6 +130,9 @@ export function FolderTree({
     dragStartPointerY.current = (event.activatorEvent as PointerEvent).clientY
     const pathStr = event.active.id as string
     setActiveDragId(pathStr)
+
+    const isMulti = selectedPaths.includes(pathStr) && selectedPaths.length > 1
+    setIsMultiDrag(isMulti)
 
     // Cache dragged node so DragOverlay stays correct after onMove() changes paths
     const activePath = pathStr.split(',').map(Number)
@@ -215,15 +220,23 @@ export function FolderTree({
     }, 200)
 
     if (!over || !currentDropTarget) {
+      setIsMultiDrag(false)
       return
     }
 
-    const fromPath = (active.id as string).split(',').map(Number)
-    onMove(fromPath, currentDropTarget.path, currentDropTarget.position)
+    if (isMultiDrag) {
+      const fromPaths = selectedPaths.map(sp => sp.split(',').map(Number))
+      onMoveMultiple(fromPaths, currentDropTarget.path, currentDropTarget.position)
+    } else {
+      const fromPath = (active.id as string).split(',').map(Number)
+      onMove(fromPath, currentDropTarget.path, currentDropTarget.position)
+    }
 
     if (currentDropTarget.position === 'inside' && !expandedPaths.has(currentDropTarget.path.join(','))) {
       onToggleExpand(currentDropTarget.path)
     }
+
+    setIsMultiDrag(false)
   }
 
   useEffect(() => {
@@ -592,7 +605,7 @@ export function FolderTree({
                       isFocused={focusedPath !== null && focusedPath.join(',') === pathStr}
                       isEditing={editingPath !== null && editingPath.join(',') === pathStr}
                       isExpanded={expandedPaths.has(pathStr)}
-                      isDragSource={activeDragId === pathStr}
+                      isDragSource={activeDragId !== null && (pathStr === activeDragId || (isMultiDrag && selectedPaths.includes(pathStr)))}
                       isDropTarget={isDropTargetInside}
                       isPreview={previewPaths.includes(pathStr)}
                       siblingNames={siblingNames}
@@ -650,7 +663,11 @@ export function FolderTree({
           }}
         >
           {ghostInfo ? (
-            <FolderTreeDragOverlay node={ghostInfo.node} depth={ghostInfo.depth} />
+            <FolderTreeDragOverlay
+              node={ghostInfo.node}
+              depth={ghostInfo.depth}
+              count={isMultiDrag ? selectedPaths.length : 1}
+            />
           ) : null}
         </DragOverlay>
       </DndContext>
