@@ -1,7 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { computeMarqueeHits } from '@/components/FolderTree'
-import { FolderTree } from '@/components/FolderTree'
+import { computeMarqueeHits, FolderTree } from '@/components/FolderTree'
 import type { FolderNode } from '@/lib/models'
 
 function makeEl(
@@ -84,6 +83,7 @@ function makeTreeProps(overrides: Partial<Parameters<typeof FolderTree>[0]> = {}
     onIndent: vi.fn(),
     onOutdent: vi.fn(),
     onMove: vi.fn(),
+    onMoveMultiple: vi.fn(),
     onCopy: vi.fn(),
     onPaste: vi.fn(),
     ...overrides,

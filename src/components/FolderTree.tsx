@@ -44,8 +44,8 @@ interface FolderTreeProps {
   onOutdent: (paths: number[][]) => void
   onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
   onMoveMultiple: (fromPaths: number[][], toPath: number[], position: 'before' | 'after' | 'inside') => void
-  onCopy: (paths: string[]) => void
-  onPaste: (afterPath: number[] | null) => void
+  onCopy?: (paths: string[]) => void
+  onPaste?: (afterPath: number[] | null) => void
 }
 
 export function computeMarqueeHits(
