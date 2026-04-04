@@ -43,6 +43,7 @@ interface FolderTreeProps {
   onIndent: (paths: number[][]) => void
   onOutdent: (paths: number[][]) => void
   onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
+  onMoveMultiple: (fromPaths: number[][], toPath: number[], position: 'before' | 'after' | 'inside') => void
 }
 
 export function computeMarqueeHits(
@@ -74,7 +75,7 @@ export function FolderTree({
   templateName, nodes, selectedPaths, focusedPath, editingPath, expandedPaths,
   onSelect, onFocusChange, onEditingChange, onToggleExpand,
   onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete,
-  onIndent, onOutdent, onMove
+  onIndent, onOutdent, onMove, onMoveMultiple
 }: FolderTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
@@ -98,16 +99,49 @@ export function FolderTree({
     position: 'before' | 'after' | 'inside'
   } | null>(null)
   const dropTargetRef = useRef<{ path: number[], position: 'before' | 'after' | 'inside' } | null>(null)
+  const [ghostInfo, setGhostInfo] = useState<{ node: FolderNode; depth: number } | null>(null)
+  const ghostClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isMultiDrag, setIsMultiDrag] = useState(false)
   const dragStartPointerY = useRef<number>(0)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
+  // Compute flat visible list early so drag handlers can reference it
+  const visibleNodes = getVisiblePaths(nodes, expandedPaths)
+
+  // Cancel any pending ghost clear timer when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (ghostClearTimerRef.current !== null) {
+        clearTimeout(ghostClearTimerRef.current)
+      }
+    }
+  }, [])
+
   const handleDragStart = (event: DragStartEvent) => {
+    // Cancel any pending ghost cleanup from a previous drag
+    if (ghostClearTimerRef.current !== null) {
+      clearTimeout(ghostClearTimerRef.current)
+      ghostClearTimerRef.current = null
+    }
+
     dragStartPointerY.current = (event.activatorEvent as PointerEvent).clientY
-    setActiveDragId(event.active.id as string)
-    // If currently editing, commit rename first
+    const pathStr = event.active.id as string
+    setActiveDragId(pathStr)
+
+    const isMulti = selectedPaths.includes(pathStr) && selectedPaths.length > 1
+    setIsMultiDrag(isMulti)
+
+    // Cache dragged node so DragOverlay stays correct after onMove() changes paths
+    const activePath = pathStr.split(',').map(Number)
+    const node = getNodeAtPath(nodes, activePath)
+    const visible = visibleNodes.find(v => v.path.join(',') === pathStr)
+    if (node && visible) {
+      setGhostInfo({ node, depth: visible.depth + 1 })
+    }
+
     if (editingPath !== null) {
       onEditingChange(null)
     }
@@ -132,8 +166,12 @@ export function FolderTree({
     const overPath = (over.id as string).split(',').map(Number)
     const activePath = (active.id as string).split(',').map(Number)
 
-    // Prevent dropping on self or descendants
-    if (isAncestorOf(activePath, overPath)) {
+    // Prevent dropping on self or descendants.
+    // For multi-drag, also check all other selected paths.
+    const pathsToCheck = isMultiDrag
+      ? selectedPaths.map(sp => sp.split(',').map(Number))
+      : [activePath]
+    if (pathsToCheck.some(p => isAncestorOf(p, overPath))) {
       setDropTarget(null)
       dropTargetRef.current = null
       return
@@ -174,23 +212,35 @@ export function FolderTree({
     const { active, over } = event
     setActiveDragId(null)
 
-    const currentDropTarget = dropTargetRef.current  // use ref, not state
+    const currentDropTarget = dropTargetRef.current
+    setDropTarget(null)
+    dropTargetRef.current = null
+
+    // Schedule ghost fade-out (200ms matches the dropAnimation duration).
+    // isMultiDrag is cleared inside the timer so the +N badge stays visible
+    // for the full animation before disappearing.
+    // Always scheduled — including the no-valid-target (early-return) path below.
+    ghostClearTimerRef.current = setTimeout(() => {
+      setGhostInfo(null)
+      setIsMultiDrag(false)
+      ghostClearTimerRef.current = null
+    }, 200)
+
     if (!over || !currentDropTarget) {
-      setDropTarget(null)
-      dropTargetRef.current = null
       return
     }
 
-    const fromPath = (active.id as string).split(',').map(Number)
-    onMove(fromPath, currentDropTarget.path, currentDropTarget.position)
+    if (isMultiDrag) {
+      const fromPaths = selectedPaths.map(sp => sp.split(',').map(Number))
+      onMoveMultiple(fromPaths, currentDropTarget.path, currentDropTarget.position)
+    } else {
+      const fromPath = (active.id as string).split(',').map(Number)
+      onMove(fromPath, currentDropTarget.path, currentDropTarget.position)
+    }
 
-    // Auto-expand if dropped inside a collapsed folder
     if (currentDropTarget.position === 'inside' && !expandedPaths.has(currentDropTarget.path.join(','))) {
       onToggleExpand(currentDropTarget.path)
     }
-
-    setDropTarget(null)
-    dropTargetRef.current = null
   }
 
   useEffect(() => {
@@ -285,10 +335,8 @@ export function FolderTree({
     // Tab / Shift+Tab
     if (e.key === 'Tab') {
       e.preventDefault()
-      const pathsToProcess: number[][] = selectedPaths.length > 0
-        ? selectedPaths.map(sp => sp.split(',').map(Number))
-        : focusedPath ? [focusedPath] : []
-      if (pathsToProcess.length === 0) return
+      if (selectedPaths.length === 0) return
+      const pathsToProcess = selectedPaths.map(sp => sp.split(',').map(Number))
       if (e.shiftKey) {
         onOutdent(pathsToProcess)
       } else {
@@ -321,23 +369,29 @@ export function FolderTree({
           onFocusChange(null)
           onSelect([])
         } else if (currentIdx > 0) {
+          const prevPath = visible[currentIdx - 1].path
           if (e.shiftKey) {
-            const prevPathStr = visible[currentIdx - 1].path.join(',')
+            const prevPathStr = prevPath.join(',')
             if (!selectedPaths.includes(prevPathStr)) {
               onSelect([...selectedPaths, prevPathStr])
             }
+          } else {
+            onSelect([prevPath.join(',')])
           }
-          handleFocusNode(visible[currentIdx - 1].path)
+          handleFocusNode(prevPath)
         }
       } else {
         if (currentIdx < visible.length - 1) {
+          const nextPath = visible[currentIdx + 1].path
           if (e.shiftKey) {
-            const nextPathStr = visible[currentIdx + 1].path.join(',')
+            const nextPathStr = nextPath.join(',')
             if (!selectedPaths.includes(nextPathStr)) {
               onSelect([...selectedPaths, nextPathStr])
             }
+          } else {
+            onSelect([nextPath.join(',')])
           }
-          handleFocusNode(visible[currentIdx + 1].path)
+          handleFocusNode(nextPath)
         }
       }
       return
@@ -357,7 +411,9 @@ export function FolderTree({
       if (isExpanded && nodeHasChildren) {
         onToggleExpand(focusedPath)
       } else if (focusedPath.length > 1) {
-        handleFocusNode(focusedPath.slice(0, -1))
+        const parentPath = focusedPath.slice(0, -1)
+        onSelect([parentPath.join(',')])
+        handleFocusNode(parentPath)
       } else {
         // Top-level node — go to root
         setIsRootFocused(true)
@@ -374,6 +430,7 @@ export function FolderTree({
           setIsRootExpanded(true)
         } else if (nodes.length > 0) {
           setIsRootFocused(false)
+          onSelect(['0'])
           handleFocusNode([0])
         }
         return
@@ -386,7 +443,9 @@ export function FolderTree({
       if (!isExpanded && nodeHasChildren) {
         onToggleExpand(focusedPath)
       } else if (isExpanded && nodeHasChildren) {
-        handleFocusNode([...focusedPath, 0])
+        const firstChildPath = [...focusedPath, 0]
+        onSelect([firstChildPath.join(',')])
+        handleFocusNode(firstChildPath)
       }
       return
     }
@@ -413,8 +472,6 @@ export function FolderTree({
     if (e.key === 'Backspace' || e.key === 'Delete') {
       if (selectedPaths.length > 0) {
         onDelete(selectedPaths)
-      } else if (focusedPath) {
-        onDelete([focusedPath.join(',')])
       }
       return
     }
@@ -424,15 +481,10 @@ export function FolderTree({
       e.preventDefault()
       if (selectedPaths.length > 0) {
         onDuplicate(selectedPaths)
-      } else if (focusedPath) {
-        onDuplicate([focusedPath.join(',')])
       }
       return
     }
   }
-
-  // Compute the flat list of visible nodes
-  const visibleNodes = getVisiblePaths(nodes, expandedPaths)
 
   return (
     <div
@@ -547,9 +599,11 @@ export function FolderTree({
                     {dropTarget?.position === 'before' &&
                       dropTarget.path.join(',') === pathStr && (
                         <div
-                          className="h-0.5 bg-primary rounded-full"
+                          className="relative h-0.5 bg-primary"
                           style={{ marginLeft: `${(depth + 1) * 24 + 8}px`, marginRight: '8px' }}
-                        />
+                        >
+                          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                        </div>
                       )}
 
                     <FolderTreeRow
@@ -560,7 +614,7 @@ export function FolderTree({
                       isFocused={focusedPath !== null && focusedPath.join(',') === pathStr}
                       isEditing={editingPath !== null && editingPath.join(',') === pathStr}
                       isExpanded={expandedPaths.has(pathStr)}
-                      isDragSource={activeDragId === pathStr}
+                      isDragSource={activeDragId !== null && (pathStr === activeDragId || (isMultiDrag && selectedPaths.includes(pathStr)))}
                       isDropTarget={isDropTargetInside}
                       isPreview={previewPaths.includes(pathStr)}
                       siblingNames={siblingNames}
@@ -595,9 +649,11 @@ export function FolderTree({
                     {dropTarget?.position === 'after' &&
                       dropTarget.path.join(',') === pathStr && (
                         <div
-                          className="h-0.5 bg-primary rounded-full"
+                          className="relative h-0.5 bg-primary"
                           style={{ marginLeft: `${(depth + 1) * 24 + 8}px`, marginRight: '8px' }}
-                        />
+                        >
+                          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                        </div>
                       )}
                   </Fragment>
                 )
@@ -606,12 +662,22 @@ export function FolderTree({
           )}
         </div>
 
-        <DragOverlay>
-          {activeDragId ? (() => {
-            const draggedVisible = visibleNodes.find(v => v.path.join(',') === activeDragId)
-            if (!draggedVisible) return null
-            return <FolderTreeDragOverlay node={draggedVisible.node} depth={draggedVisible.depth + 1} />
-          })() : null}
+        <DragOverlay
+          dropAnimation={async ({ dragOverlay: { node } }) => {
+            const animation = node.animate(
+              [{ opacity: 0.8 }, { opacity: 0 }],
+              { duration: 200, easing: 'ease-out', fill: 'forwards' }
+            )
+            await new Promise<void>(resolve => { animation.onfinish = () => resolve() })
+          }}
+        >
+          {ghostInfo ? (
+            <FolderTreeDragOverlay
+              node={ghostInfo.node}
+              depth={ghostInfo.depth}
+              count={isMultiDrag ? selectedPaths.length : 1}
+            />
+          ) : null}
         </DragOverlay>
       </DndContext>
 

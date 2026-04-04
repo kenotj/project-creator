@@ -11,7 +11,7 @@ import { validateName } from '@/lib/validation'
 import type { Template, FolderNode } from '@/lib/models'
 import {
   addNodeAt, renameNodeAt, deleteNodeAt, duplicateNodeAt,
-  insertNodeAfter, moveNode, indentNodes, outdentNodes,
+  insertNodeAfter, moveNode, moveNodes, indentNodes, outdentNodes,
   getNodeAtPath, getSiblingsAtPath, uniqueSiblingName
 } from '@/lib/tree-operations'
 import { cn } from '@/lib/utils'
@@ -197,6 +197,14 @@ export function TemplateEditor({
     setFolders((prev) => moveNode(prev, fromPath, toPath, position))
   }, [])
 
+  const handleMoveMultiple = useCallback((
+    fromPaths: number[][],
+    toPath: number[],
+    position: 'before' | 'after' | 'inside'
+  ) => {
+    setFolders(prev => moveNodes(prev, fromPaths, toPath, position))
+  }, [])
+
   const handleIndent = (paths: number[][]) => {
     // Pre-compute new parent paths for auto-expand
     const topLevel = paths.filter(p =>
@@ -329,6 +337,7 @@ export function TemplateEditor({
               onIndent={handleIndent}
               onOutdent={handleOutdent}
               onMove={handleMove}
+              onMoveMultiple={handleMoveMultiple}
             />
           </div>
         ) : (

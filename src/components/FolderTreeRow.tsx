@@ -27,7 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
-import { useSortable } from '@dnd-kit/sortable'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { cn } from '@/lib/utils'
 import { validateName } from '@/lib/validation'
 import type { FolderNode } from '@/lib/models'
@@ -85,13 +85,8 @@ export function FolderTreeRow({
   const isSelected = selectedPaths.includes(pathStr)
   const hasChildren = node.children.length > 0
 
-  const { attributes, listeners, setNodeRef } = useSortable({
-    id: pathStr,
-  })
-
-  const style = {
-    // padding is done via spacer divs for better control
-  }
+  const { attributes, listeners, setNodeRef: setDraggableRef } = useDraggable({ id: pathStr })
+  const { setNodeRef: setDroppableRef } = useDroppable({ id: pathStr })
 
   useEffect(() => {
     if (isEditing) {
@@ -131,14 +126,13 @@ export function FolderTreeRow({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          ref={setNodeRef}
+          ref={(el) => { setDraggableRef(el); setDroppableRef(el) }}
           {...attributes}
           className={cn(
             'group/row flex items-center h-8 cursor-pointer select-none text-sm transition-colors',
             isDragSource && 'opacity-50',
             isDropTarget && 'ring-2 ring-primary bg-primary/10'
           )}
-          style={style}
           data-path={pathStr}
           onClick={(e) => {
             e.stopPropagation()
