@@ -98,6 +98,8 @@ export function FolderTree({
     position: 'before' | 'after' | 'inside'
   } | null>(null)
   const dropTargetRef = useRef<{ path: number[], position: 'before' | 'after' | 'inside' } | null>(null)
+  const [ghostInfo, setGhostInfo] = useState<{ node: FolderNode; depth: number } | null>(null)
+  const ghostClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dragStartPointerY = useRef<number>(0)
 
   const sensors = useSensors(
@@ -105,9 +107,24 @@ export function FolderTree({
   )
 
   const handleDragStart = (event: DragStartEvent) => {
+    // Cancel any pending ghost cleanup from a previous drag
+    if (ghostClearTimerRef.current !== null) {
+      clearTimeout(ghostClearTimerRef.current)
+      ghostClearTimerRef.current = null
+    }
+
     dragStartPointerY.current = (event.activatorEvent as PointerEvent).clientY
-    setActiveDragId(event.active.id as string)
-    // If currently editing, commit rename first
+    const pathStr = event.active.id as string
+    setActiveDragId(pathStr)
+
+    // Cache dragged node so DragOverlay stays correct after onMove() changes paths
+    const activePath = pathStr.split(',').map(Number)
+    const node = getNodeAtPath(nodes, activePath)
+    const visible = visibleNodes.find(v => v.path.join(',') === pathStr)
+    if (node && visible) {
+      setGhostInfo({ node, depth: visible.depth + 1 })
+    }
+
     if (editingPath !== null) {
       onEditingChange(null)
     }
@@ -174,23 +191,27 @@ export function FolderTree({
     const { active, over } = event
     setActiveDragId(null)
 
-    const currentDropTarget = dropTargetRef.current  // use ref, not state
+    const currentDropTarget = dropTargetRef.current
+    setDropTarget(null)
+    dropTargetRef.current = null
+
+    // Schedule ghost fade-out (200ms matches the dropAnimation duration).
+    // Always scheduled — including the no-valid-target (early-return) path below.
+    ghostClearTimerRef.current = setTimeout(() => {
+      setGhostInfo(null)
+      ghostClearTimerRef.current = null
+    }, 200)
+
     if (!over || !currentDropTarget) {
-      setDropTarget(null)
-      dropTargetRef.current = null
       return
     }
 
     const fromPath = (active.id as string).split(',').map(Number)
     onMove(fromPath, currentDropTarget.path, currentDropTarget.position)
 
-    // Auto-expand if dropped inside a collapsed folder
     if (currentDropTarget.position === 'inside' && !expandedPaths.has(currentDropTarget.path.join(','))) {
       onToggleExpand(currentDropTarget.path)
     }
-
-    setDropTarget(null)
-    dropTargetRef.current = null
   }
 
   useEffect(() => {
@@ -610,12 +631,18 @@ export function FolderTree({
           )}
         </div>
 
-        <DragOverlay>
-          {activeDragId ? (() => {
-            const draggedVisible = visibleNodes.find(v => v.path.join(',') === activeDragId)
-            if (!draggedVisible) return null
-            return <FolderTreeDragOverlay node={draggedVisible.node} depth={draggedVisible.depth + 1} />
-          })() : null}
+        <DragOverlay
+          dropAnimation={async ({ dragOverlay: { node } }) => {
+            const animation = node.animate(
+              [{ opacity: 0.8 }, { opacity: 0 }],
+              { duration: 200, easing: 'ease-out', fill: 'forwards' }
+            )
+            await new Promise<void>(resolve => { animation.onfinish = () => resolve() })
+          }}
+        >
+          {ghostInfo ? (
+            <FolderTreeDragOverlay node={ghostInfo.node} depth={ghostInfo.depth} />
+          ) : null}
         </DragOverlay>
       </DndContext>
 
