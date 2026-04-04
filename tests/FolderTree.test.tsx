@@ -1,5 +1,8 @@
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { computeMarqueeHits } from '@/components/FolderTree'
+import { FolderTree } from '@/components/FolderTree'
+import type { FolderNode } from '@/lib/models'
 
 function makeEl(
   pathStr: string,
@@ -55,5 +58,47 @@ describe('computeMarqueeHits', () => {
     const rect = container.getBoundingClientRect()
     const hits = computeMarqueeHits({ x1: 0, y1: 0, x2: 50, y2: 5 }, container, rect)
     expect(hits).toEqual([])
+  })
+})
+
+// Shared minimal tree used across keyboard tests
+const singleNode: FolderNode[] = [{ name: 'Alpha', children: [] }]
+
+function makeTreeProps(overrides: Partial<Parameters<typeof FolderTree>[0]> = {}) {
+  return {
+    templateName: 'Test',
+    nodes: singleNode,
+    selectedPaths: [],
+    focusedPath: [0],
+    editingPath: null,
+    expandedPaths: new Set<string>(['0']),
+    onSelect: vi.fn(),
+    onFocusChange: vi.fn(),
+    onEditingChange: vi.fn(),
+    onToggleExpand: vi.fn(),
+    onAddSubfolder: vi.fn(),
+    onAddSiblingAfter: vi.fn(),
+    onRename: vi.fn(),
+    onDuplicate: vi.fn(),
+    onDelete: vi.fn(),
+    onIndent: vi.fn(),
+    onOutdent: vi.fn(),
+    onMove: vi.fn(),
+    onCopy: vi.fn(),
+    onPaste: vi.fn(),
+    ...overrides,
+  }
+}
+
+describe('FolderTree keyboard: Enter', () => {
+  it('calls onEditingChange with focusedPath when Enter is pressed', () => {
+    const onEditingChange = vi.fn()
+    const onAddSiblingAfter = vi.fn()
+    const { container } = render(
+      <FolderTree {...makeTreeProps({ onEditingChange, onAddSiblingAfter })} />
+    )
+    fireEvent.keyDown(container.firstChild as HTMLElement, { key: 'Enter' })
+    expect(onEditingChange).toHaveBeenCalledWith([0])
+    expect(onAddSiblingAfter).not.toHaveBeenCalled()
   })
 })

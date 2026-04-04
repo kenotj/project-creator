@@ -44,6 +44,8 @@ interface FolderTreeProps {
   onOutdent: (paths: number[][]) => void
   onMove: (fromPath: number[], toPath: number[], position: 'before' | 'after' | 'inside') => void
   onMoveMultiple: (fromPaths: number[][], toPath: number[], position: 'before' | 'after' | 'inside') => void
+  onCopy: (paths: string[]) => void
+  onPaste: (afterPath: number[] | null) => void
 }
 
 export function computeMarqueeHits(
@@ -75,7 +77,7 @@ export function FolderTree({
   templateName, nodes, selectedPaths, focusedPath, editingPath, expandedPaths,
   onSelect, onFocusChange, onEditingChange, onToggleExpand,
   onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete,
-  onIndent, onOutdent, onMove, onMoveMultiple
+  onIndent, onOutdent, onMove, onMoveMultiple, onCopy, onPaste
 }: FolderTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
@@ -452,7 +454,7 @@ export function FolderTree({
 
     // Enter
     if (e.key === 'Enter') {
-      if (focusedPath) onAddSiblingAfter(focusedPath)
+      if (focusedPath) onEditingChange(focusedPath)
       return
     }
 
