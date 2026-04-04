@@ -428,8 +428,8 @@ export function moveNodes(
   let adjustedToPath = [...toPath]
   const reverseSorted = [...sorted].reverse()
   for (const removedPath of reverseSorted) {
-    adjustedToPath = adjustPathAfterRemoval(adjustedToPath, removedPath)
     result = deleteNodeAt(result, removedPath)
+    adjustedToPath = adjustPathAfterRemoval(adjustedToPath, removedPath)
   }
 
   // 6. Insert nodesToMove at adjustedToPath
