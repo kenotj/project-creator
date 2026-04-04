@@ -126,7 +126,7 @@ export function FolderTreeRow({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          ref={(node) => { setDraggableRef(node); setDroppableRef(node) }}
+          ref={(el) => { setDraggableRef(el); setDroppableRef(el) }}
           {...attributes}
           className={cn(
             'group/row flex items-center h-8 cursor-pointer select-none text-sm transition-colors',
