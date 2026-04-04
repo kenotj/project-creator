@@ -1,19 +1,17 @@
 // src/lib/store.ts
 import { readTextFile, writeTextFile, mkdir, exists } from '@tauri-apps/plugin-fs'
-import { homeDir } from '@tauri-apps/api/path'
+import { appLocalDataDir } from '@tauri-apps/api/path'
 import { templateFromDict, templateToDict, type Template } from './models'
 
-const CONFIG_DIR = '.projectcreator'
 const CONFIG_FILE = 'templates.json'
 
 async function getConfigPath(): Promise<string> {
-  const home = await homeDir()
-  return `${home}/${CONFIG_DIR}/${CONFIG_FILE}`
+  const dir = await appLocalDataDir()
+  return `${dir}/${CONFIG_FILE}`
 }
 
 async function getDirPath(): Promise<string> {
-  const home = await homeDir()
-  return `${home}/${CONFIG_DIR}`
+  return appLocalDataDir()
 }
 
 export async function loadTemplates(): Promise<Template[]> {

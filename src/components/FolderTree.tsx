@@ -525,85 +525,85 @@ export function FolderTree({
         </ContextMenu>
 
         <div className={cn(!isRootExpanded && 'hidden')}>
-            {nodes.length === 0 ? (
-              <div className="flex items-center h-8 text-sm text-muted-foreground pl-12">
-                No folders yet.
-              </div>
-            ) : (
-              <div className="space-y-0.5">
-                {visibleNodes.map(({ path, depth, node }) => {
-                  const pathStr = path.join(',')
-                  const siblings = getSiblingsAtPath(nodes, path)
-                  const siblingNames = siblings
-                    .filter((_, i) => i !== path[path.length - 1])
-                    .map((s) => s.name)
+          {nodes.length === 0 ? (
+            <div className="flex items-center h-8 text-sm text-muted-foreground pl-12">
+              No folders yet.
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {visibleNodes.map(({ path, depth, node }) => {
+                const pathStr = path.join(',')
+                const siblings = getSiblingsAtPath(nodes, path)
+                const siblingNames = siblings
+                  .filter((_, i) => i !== path[path.length - 1])
+                  .map((s) => s.name)
 
-                  const isDropTargetInside = dropTarget?.position === 'inside' &&
-                    dropTarget.path.join(',') === pathStr
+                const isDropTargetInside = dropTarget?.position === 'inside' &&
+                  dropTarget.path.join(',') === pathStr
 
-                  return (
-                    <Fragment key={pathStr}>
-                      {/* Drop indicator: blue line BEFORE this row */}
-                      {dropTarget?.position === 'before' &&
-                       dropTarget.path.join(',') === pathStr && (
+                return (
+                  <Fragment key={pathStr}>
+                    {/* Drop indicator: blue line BEFORE this row */}
+                    {dropTarget?.position === 'before' &&
+                      dropTarget.path.join(',') === pathStr && (
                         <div
                           className="h-0.5 bg-primary rounded-full"
                           style={{ marginLeft: `${(depth + 1) * 24 + 8}px`, marginRight: '8px' }}
                         />
                       )}
 
-                      <FolderTreeRow
-                        node={node}
-                        path={path}
-                        depth={depth + 1}
-                        selectedPaths={selectedPaths}
-                        isFocused={focusedPath !== null && focusedPath.join(',') === pathStr}
-                        isEditing={editingPath !== null && editingPath.join(',') === pathStr}
-                        isExpanded={expandedPaths.has(pathStr)}
-                        isDragSource={activeDragId === pathStr}
-                        isDropTarget={isDropTargetInside}
-                        isPreview={previewPaths.includes(pathStr)}
-                        siblingNames={siblingNames}
-                        onSelect={onSelect}
-                        onShiftSelect={(clickedPath) => {
-                          const visible = getVisiblePaths(nodes, expandedPaths)
-                          const clickedIdx = visible.findIndex(v => v.path.join(',') === clickedPath.join(','))
-                          if (selectedPaths.length === 0 || clickedIdx === -1) {
-                            onSelect([clickedPath.join(',')])
-                            return
-                          }
-                          const anchor = focusedPath ?? (selectedPaths[0] ? selectedPaths[0].split(',').map(Number) : null)
-                          const anchorIdx = anchor ? visible.findIndex(v => v.path.join(',') === anchor.join(',')) : -1
-                          if (anchorIdx === -1) { onSelect([clickedPath.join(',')]); return }
-                          const start = Math.min(anchorIdx, clickedIdx)
-                          const end = Math.max(anchorIdx, clickedIdx)
-                          const range = visible.slice(start, end + 1).map(v => v.path.join(','))
-                          onSelect(range)
-                        }}
-                        onFocusChange={handleFocusNode}
-                        onEditingChange={onEditingChange}
-                        onToggleExpand={(path) => {
-                          if (activeDragId === null) onToggleExpand(path)
-                        }}
-                        onAddSubfolder={onAddSubfolder}
-                        onRename={onRename}
-                        onDuplicate={onDuplicate}
-                        onDelete={onDelete}
-                      />
+                    <FolderTreeRow
+                      node={node}
+                      path={path}
+                      depth={depth + 1}
+                      selectedPaths={selectedPaths}
+                      isFocused={focusedPath !== null && focusedPath.join(',') === pathStr}
+                      isEditing={editingPath !== null && editingPath.join(',') === pathStr}
+                      isExpanded={expandedPaths.has(pathStr)}
+                      isDragSource={activeDragId === pathStr}
+                      isDropTarget={isDropTargetInside}
+                      isPreview={previewPaths.includes(pathStr)}
+                      siblingNames={siblingNames}
+                      onSelect={onSelect}
+                      onShiftSelect={(clickedPath) => {
+                        const visible = getVisiblePaths(nodes, expandedPaths)
+                        const clickedIdx = visible.findIndex(v => v.path.join(',') === clickedPath.join(','))
+                        if (selectedPaths.length === 0 || clickedIdx === -1) {
+                          onSelect([clickedPath.join(',')])
+                          return
+                        }
+                        const anchor = focusedPath ?? (selectedPaths[0] ? selectedPaths[0].split(',').map(Number) : null)
+                        const anchorIdx = anchor ? visible.findIndex(v => v.path.join(',') === anchor.join(',')) : -1
+                        if (anchorIdx === -1) { onSelect([clickedPath.join(',')]); return }
+                        const start = Math.min(anchorIdx, clickedIdx)
+                        const end = Math.max(anchorIdx, clickedIdx)
+                        const range = visible.slice(start, end + 1).map(v => v.path.join(','))
+                        onSelect(range)
+                      }}
+                      onFocusChange={handleFocusNode}
+                      onEditingChange={onEditingChange}
+                      onToggleExpand={(path) => {
+                        if (activeDragId === null) onToggleExpand(path)
+                      }}
+                      onAddSubfolder={onAddSubfolder}
+                      onRename={onRename}
+                      onDuplicate={onDuplicate}
+                      onDelete={onDelete}
+                    />
 
-                      {/* Drop indicator: blue line AFTER this row */}
-                      {dropTarget?.position === 'after' &&
-                       dropTarget.path.join(',') === pathStr && (
+                    {/* Drop indicator: blue line AFTER this row */}
+                    {dropTarget?.position === 'after' &&
+                      dropTarget.path.join(',') === pathStr && (
                         <div
                           className="h-0.5 bg-primary rounded-full"
                           style={{ marginLeft: `${(depth + 1) * 24 + 8}px`, marginRight: '8px' }}
                         />
                       )}
-                    </Fragment>
-                  )
-                })}
-              </div>
-            )}
+                  </Fragment>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <DragOverlay>

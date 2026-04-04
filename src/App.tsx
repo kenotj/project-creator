@@ -103,7 +103,9 @@ export default function App() {
     const updated = addTemplate(templates, name)
     setTemplates(updated)
     setSelectedId(updated[updated.length - 1].id)
-    saveTemplates(updated)
+    saveTemplates(updated).catch(() => {
+      toast.error('Failed to save template')
+    })
   }, [templates])
 
   const persistTemplate = useCallback(async (merged: Template) => {

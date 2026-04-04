@@ -11,8 +11,6 @@
     "fs:allow-exists",
     "dialog:allow-open",
     "core:path:allow-resolve",
-    "fs:scope-home-recursive",
-    "fs:scope-desktop-recursive",
-    "fs:scope-document-recursive"
+    "fs:scope-applocaldata-recursive"
   ]
 }
