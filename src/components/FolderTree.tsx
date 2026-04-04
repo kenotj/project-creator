@@ -106,6 +106,18 @@ export function FolderTree({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
+  // Compute flat visible list early so drag handlers can reference it
+  const visibleNodes = getVisiblePaths(nodes, expandedPaths)
+
+  // Cancel any pending ghost clear timer when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (ghostClearTimerRef.current !== null) {
+        clearTimeout(ghostClearTimerRef.current)
+      }
+    }
+  }, [])
+
   const handleDragStart = (event: DragStartEvent) => {
     // Cancel any pending ghost cleanup from a previous drag
     if (ghostClearTimerRef.current !== null) {
@@ -451,9 +463,6 @@ export function FolderTree({
       return
     }
   }
-
-  // Compute the flat list of visible nodes
-  const visibleNodes = getVisiblePaths(nodes, expandedPaths)
 
   return (
     <div
