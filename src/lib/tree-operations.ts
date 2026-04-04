@@ -102,6 +102,26 @@ export function isAncestorOf(ancestor: number[], descendant: number[]): boolean 
 }
 
 /**
+ * Adjust `toPath` to account for the removal of a node at `removedPath`.
+ * Mirrors the logic inside `moveNode` lines 127–141.
+ */
+function adjustPathAfterRemoval(toPath: number[], removedPath: number[]): number[] {
+  const adjusted = [...toPath]
+  const sharedDepth = Math.min(removedPath.length, toPath.length)
+  for (let d = 0; d < sharedDepth; d++) {
+    const samePrefix = removedPath.slice(0, d).every((v, i) => v === toPath[i])
+    if (!samePrefix) break
+    if (d === removedPath.length - 1) {
+      if (removedPath[d] < toPath[d]) {
+        adjusted[d] -= 1
+      }
+      break
+    }
+  }
+  return adjusted
+}
+
+/**
  * Move the node at `fromPath` to a position relative to the node at `toPath`.
  * `position` is 'before', 'after', or 'inside' (appended as last child of toPath node).
  */
@@ -364,5 +384,75 @@ export function getVisiblePaths(
   }
 
   traverse(nodes, [], 0)
+  return result
+}
+
+/**
+ * Move multiple nodes (by path) to a position relative to `toPath`.
+ * All selected nodes move together, maintaining their relative DFS order.
+ * Nodes whose ancestors are also in `fromPaths` are skipped (they move
+ * with their parent's subtree automatically).
+ */
+export function moveNodes(
+  nodes: FolderNode[],
+  fromPaths: number[][],
+  toPath: number[],
+  position: 'before' | 'after' | 'inside'
+): FolderNode[] {
+  // 1. Top-level filter: drop any path whose ancestor is also in fromPaths
+  const topLevel = fromPaths.filter(p =>
+    !fromPaths.some(other =>
+      other.length < p.length && other.every((v, i) => v === p[i])
+    )
+  )
+  if (topLevel.length === 0) return nodes
+
+  // 2. Guard: can't move into own descendant
+  if (topLevel.some(p => isAncestorOf(p, toPath))) return nodes
+
+  // 3. Sort in DFS order (compare element by element)
+  const sorted = [...topLevel].sort((a, b) => {
+    const len = Math.min(a.length, b.length)
+    for (let i = 0; i < len; i++) {
+      if (a[i] !== b[i]) return a[i] - b[i]
+    }
+    return a.length - b.length
+  })
+
+  // 4. Collect nodes to move
+  const nodesToMove = sorted.map(p => getNodeAtPath(nodes, p)).filter((n): n is FolderNode => n !== undefined)
+  if (nodesToMove.length === 0) return nodes
+
+  // 5. Remove in reverse DFS order; adjust toPath after each removal
+  let result = nodes
+  let adjustedToPath = [...toPath]
+  const reverseSorted = [...sorted].reverse()
+  for (const removedPath of reverseSorted) {
+    adjustedToPath = adjustPathAfterRemoval(adjustedToPath, removedPath)
+    result = deleteNodeAt(result, removedPath)
+  }
+
+  // 6. Insert nodesToMove at adjustedToPath
+  if (position === 'inside') {
+    for (const node of nodesToMove) {
+      result = addNodeAt(result, adjustedToPath, node)
+    }
+  } else if (position === 'before') {
+    const parentPath = adjustedToPath.slice(0, -1)
+    let insertIdx = adjustedToPath[adjustedToPath.length - 1]
+    for (const node of nodesToMove) {
+      result = insertAtIndex(result, parentPath, insertIdx, node)
+      insertIdx++
+    }
+  } else {
+    // 'after'
+    const parentPath = adjustedToPath.slice(0, -1)
+    let insertIdx = adjustedToPath[adjustedToPath.length - 1] + 1
+    for (const node of nodesToMove) {
+      result = insertAtIndex(result, parentPath, insertIdx, node)
+      insertIdx++
+    }
+  }
+
   return result
 }
