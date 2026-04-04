@@ -547,9 +547,11 @@ export function FolderTree({
                     {dropTarget?.position === 'before' &&
                       dropTarget.path.join(',') === pathStr && (
                         <div
-                          className="h-0.5 bg-primary rounded-full"
+                          className="relative h-0.5 bg-primary"
                           style={{ marginLeft: `${(depth + 1) * 24 + 8}px`, marginRight: '8px' }}
-                        />
+                        >
+                          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                        </div>
                       )}
 
                     <FolderTreeRow
@@ -595,9 +597,11 @@ export function FolderTree({
                     {dropTarget?.position === 'after' &&
                       dropTarget.path.join(',') === pathStr && (
                         <div
-                          className="h-0.5 bg-primary rounded-full"
+                          className="relative h-0.5 bg-primary"
                           style={{ marginLeft: `${(depth + 1) * 24 + 8}px`, marginRight: '8px' }}
-                        />
+                        >
+                          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                        </div>
                       )}
                   </Fragment>
                 )
