@@ -20,7 +20,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from './ui/context-menu'
-import { getVisiblePaths, getNodeAtPath, getSiblingsAtPath, isAncestorOf, moveNodes } from '@/lib/tree-operations'
+import { getVisiblePaths, getNodeAtPath, getSiblingsAtPath, isAncestorOf } from '@/lib/tree-operations'
 import { cn } from '@/lib/utils'
 import type { FolderNode } from '@/lib/models'
 
@@ -166,8 +166,12 @@ export function FolderTree({
     const overPath = (over.id as string).split(',').map(Number)
     const activePath = (active.id as string).split(',').map(Number)
 
-    // Prevent dropping on self or descendants
-    if (isAncestorOf(activePath, overPath)) {
+    // Prevent dropping on self or descendants.
+    // For multi-drag, also check all other selected paths.
+    const pathsToCheck = isMultiDrag
+      ? selectedPaths.map(sp => sp.split(',').map(Number))
+      : [activePath]
+    if (pathsToCheck.some(p => isAncestorOf(p, overPath))) {
       setDropTarget(null)
       dropTargetRef.current = null
       return
@@ -213,14 +217,16 @@ export function FolderTree({
     dropTargetRef.current = null
 
     // Schedule ghost fade-out (200ms matches the dropAnimation duration).
+    // isMultiDrag is cleared inside the timer so the +N badge stays visible
+    // for the full animation before disappearing.
     // Always scheduled — including the no-valid-target (early-return) path below.
     ghostClearTimerRef.current = setTimeout(() => {
       setGhostInfo(null)
+      setIsMultiDrag(false)
       ghostClearTimerRef.current = null
     }, 200)
 
     if (!over || !currentDropTarget) {
-      setIsMultiDrag(false)
       return
     }
 
@@ -235,8 +241,6 @@ export function FolderTree({
     if (currentDropTarget.position === 'inside' && !expandedPaths.has(currentDropTarget.path.join(','))) {
       onToggleExpand(currentDropTarget.path)
     }
-
-    setIsMultiDrag(false)
   }
 
   useEffect(() => {
