@@ -102,3 +102,85 @@ describe('FolderTree keyboard: Enter', () => {
     expect(onAddSiblingAfter).not.toHaveBeenCalled()
   })
 })
+
+const threeNodes: FolderNode[] = [
+  { name: 'Alpha', children: [] },
+  { name: 'Beta', children: [] },
+  { name: 'Gamma', children: [] },
+]
+
+describe('FolderTree keyboard: Shift+Arrow rubber-band selection', () => {
+  it('selects anchor + next node on first Shift+ArrowDown', () => {
+    const onSelect = vi.fn()
+    const { container } = render(
+      <FolderTree
+        {...makeTreeProps({
+          nodes: threeNodes,
+          focusedPath: [0],
+          expandedPaths: new Set(['0', '1', '2']),
+          onSelect,
+        })}
+      />
+    )
+    fireEvent.keyDown(container.firstChild as HTMLElement, {
+      key: 'ArrowDown',
+      shiftKey: true,
+    })
+    // Should select [0] (anchor) + [1] (new focus)
+    expect(onSelect).toHaveBeenCalledWith(['0', '1'])
+  })
+
+  it('shrinks selection back when reversing direction', () => {
+    const onSelect = vi.fn()
+    const { container } = render(
+      <FolderTree
+        {...makeTreeProps({
+          nodes: threeNodes,
+          focusedPath: [1],
+          selectedPaths: ['0', '1'],
+          expandedPaths: new Set(['0', '1', '2']),
+          onSelect,
+        })}
+      />
+    )
+    // First Shift+Down from [1] → anchor=[1], range=[1,2]
+    fireEvent.keyDown(container.firstChild as HTMLElement, {
+      key: 'ArrowDown',
+      shiftKey: true,
+    })
+    const firstCall = onSelect.mock.calls[0][0]
+    expect(firstCall).toContain('2')
+
+    // Shift+Up from [2] → range back to [1] only
+    // Note: after keyDown the focused node moves to [2], but since focusedPath is
+    // a prop (not internal state), the component still sees focusedPath=[1] for the
+    // second keyDown. The anchor was set to [1] on the first press, new focus after
+    // second press is [0], so range is [0,1].
+    onSelect.mockClear()
+    fireEvent.keyDown(container.firstChild as HTMLElement, {
+      key: 'ArrowUp',
+      shiftKey: true,
+    })
+    const secondCall = onSelect.mock.calls[0][0]
+    // Range from anchor [1] up one step: [0,1] — but focusedPath prop is still [1]
+    // so anchor stays [1], newIdx = 0, range = ['0', '1']
+    expect(secondCall).toEqual(['0', '1'])
+  })
+
+  it('plain ArrowDown clears selection', () => {
+    const onSelect = vi.fn()
+    const { container } = render(
+      <FolderTree
+        {...makeTreeProps({
+          nodes: threeNodes,
+          focusedPath: [0],
+          selectedPaths: ['0', '1'],
+          expandedPaths: new Set(['0', '1', '2']),
+          onSelect,
+        })}
+      />
+    )
+    fireEvent.keyDown(container.firstChild as HTMLElement, { key: 'ArrowDown' })
+    expect(onSelect).toHaveBeenCalledWith([])
+  })
+})

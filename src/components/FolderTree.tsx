@@ -84,8 +84,10 @@ export function FolderTree({
   const [previewPaths, setPreviewPaths] = useState<string[]>([])
   const [isRootExpanded, setIsRootExpanded] = useState(true)
   const [isRootFocused, setIsRootFocused] = useState(false)
+  const selectionAnchorRef = useRef<number[] | null>(null)
 
   const handleFocusNode = (path: number[] | null) => {
+    selectionAnchorRef.current = null
     if (path !== null) setIsRootFocused(false)
     onFocusChange(path)
   }
@@ -353,7 +355,6 @@ export function FolderTree({
       const visible = getVisiblePaths(nodes, expandedPaths)
 
       if (isRootFocused) {
-        // Root is focused — only ArrowDown does anything
         if (e.key === 'ArrowDown' && visible.length > 0) {
           setIsRootFocused(false)
           handleFocusNode(visible[0].path)
@@ -366,34 +367,50 @@ export function FolderTree({
 
       if (e.key === 'ArrowUp') {
         if (currentIdx === 0) {
-          // First node — move focus to root
           setIsRootFocused(true)
           onFocusChange(null)
           onSelect([])
+          selectionAnchorRef.current = null
         } else if (currentIdx > 0) {
-          const prevPath = visible[currentIdx - 1].path
+          const newFocus = visible[currentIdx - 1].path
           if (e.shiftKey) {
-            const prevPathStr = prevPath.join(',')
-            if (!selectedPaths.includes(prevPathStr)) {
-              onSelect([...selectedPaths, prevPathStr])
+            if (selectionAnchorRef.current === null) {
+              selectionAnchorRef.current = focusedPath
             }
+            const anchorIdx = visible.findIndex(
+              v => v.path.join(',') === selectionAnchorRef.current!.join(',')
+            )
+            const newIdx = currentIdx - 1
+            const start = Math.min(anchorIdx, newIdx)
+            const end = Math.max(anchorIdx, newIdx)
+            onSelect(visible.slice(start, end + 1).map(v => v.path.join(',')))
+            onFocusChange(newFocus)
+            if (newFocus !== null) setIsRootFocused(false)
           } else {
-            onSelect([prevPath.join(',')])
+            onSelect([])
+            handleFocusNode(newFocus)
           }
-          handleFocusNode(prevPath)
         }
       } else {
         if (currentIdx < visible.length - 1) {
-          const nextPath = visible[currentIdx + 1].path
+          const newFocus = visible[currentIdx + 1].path
           if (e.shiftKey) {
-            const nextPathStr = nextPath.join(',')
-            if (!selectedPaths.includes(nextPathStr)) {
-              onSelect([...selectedPaths, nextPathStr])
+            if (selectionAnchorRef.current === null) {
+              selectionAnchorRef.current = focusedPath
             }
+            const anchorIdx = visible.findIndex(
+              v => v.path.join(',') === selectionAnchorRef.current!.join(',')
+            )
+            const newIdx = currentIdx + 1
+            const start = Math.min(anchorIdx, newIdx)
+            const end = Math.max(anchorIdx, newIdx)
+            onSelect(visible.slice(start, end + 1).map(v => v.path.join(',')))
+            onFocusChange(newFocus)
+            if (newFocus !== null) setIsRootFocused(false)
           } else {
-            onSelect([nextPath.join(',')])
+            onSelect([])
+            handleFocusNode(newFocus)
           }
-          handleFocusNode(nextPath)
         }
       }
       return
