@@ -331,10 +331,8 @@ export function FolderTree({
     // Tab / Shift+Tab
     if (e.key === 'Tab') {
       e.preventDefault()
-      const pathsToProcess: number[][] = selectedPaths.length > 0
-        ? selectedPaths.map(sp => sp.split(',').map(Number))
-        : focusedPath ? [focusedPath] : []
-      if (pathsToProcess.length === 0) return
+      if (selectedPaths.length === 0) return
+      const pathsToProcess = selectedPaths.map(sp => sp.split(',').map(Number))
       if (e.shiftKey) {
         onOutdent(pathsToProcess)
       } else {
@@ -367,23 +365,29 @@ export function FolderTree({
           onFocusChange(null)
           onSelect([])
         } else if (currentIdx > 0) {
+          const prevPath = visible[currentIdx - 1].path
           if (e.shiftKey) {
-            const prevPathStr = visible[currentIdx - 1].path.join(',')
+            const prevPathStr = prevPath.join(',')
             if (!selectedPaths.includes(prevPathStr)) {
               onSelect([...selectedPaths, prevPathStr])
             }
+          } else {
+            onSelect([prevPath.join(',')])
           }
-          handleFocusNode(visible[currentIdx - 1].path)
+          handleFocusNode(prevPath)
         }
       } else {
         if (currentIdx < visible.length - 1) {
+          const nextPath = visible[currentIdx + 1].path
           if (e.shiftKey) {
-            const nextPathStr = visible[currentIdx + 1].path.join(',')
+            const nextPathStr = nextPath.join(',')
             if (!selectedPaths.includes(nextPathStr)) {
               onSelect([...selectedPaths, nextPathStr])
             }
+          } else {
+            onSelect([nextPath.join(',')])
           }
-          handleFocusNode(visible[currentIdx + 1].path)
+          handleFocusNode(nextPath)
         }
       }
       return
@@ -403,7 +407,9 @@ export function FolderTree({
       if (isExpanded && nodeHasChildren) {
         onToggleExpand(focusedPath)
       } else if (focusedPath.length > 1) {
-        handleFocusNode(focusedPath.slice(0, -1))
+        const parentPath = focusedPath.slice(0, -1)
+        onSelect([parentPath.join(',')])
+        handleFocusNode(parentPath)
       } else {
         // Top-level node — go to root
         setIsRootFocused(true)
@@ -420,6 +426,7 @@ export function FolderTree({
           setIsRootExpanded(true)
         } else if (nodes.length > 0) {
           setIsRootFocused(false)
+          onSelect(['0'])
           handleFocusNode([0])
         }
         return
@@ -432,7 +439,9 @@ export function FolderTree({
       if (!isExpanded && nodeHasChildren) {
         onToggleExpand(focusedPath)
       } else if (isExpanded && nodeHasChildren) {
-        handleFocusNode([...focusedPath, 0])
+        const firstChildPath = [...focusedPath, 0]
+        onSelect([firstChildPath.join(',')])
+        handleFocusNode(firstChildPath)
       }
       return
     }
@@ -459,8 +468,6 @@ export function FolderTree({
     if (e.key === 'Backspace' || e.key === 'Delete') {
       if (selectedPaths.length > 0) {
         onDelete(selectedPaths)
-      } else if (focusedPath) {
-        onDelete([focusedPath.join(',')])
       }
       return
     }
@@ -470,8 +477,6 @@ export function FolderTree({
       e.preventDefault()
       if (selectedPaths.length > 0) {
         onDuplicate(selectedPaths)
-      } else if (focusedPath) {
-        onDuplicate([focusedPath.join(',')])
       }
       return
     }
