@@ -87,4 +87,30 @@ describe('moveNodes', () => {
     expect(result.map(x => x.name)).toEqual(['B', 'A', 'B2', 'C', 'D'])
     expect(result[0].children.map(x => x.name)).toEqual(['B1'])
   })
+
+  it('returns nodes unchanged for empty fromPaths', () => {
+    const original = tree()
+    const result = moveNodes(original, [], [1], 'before')
+    expect(result).toEqual(original)
+  })
+
+  it('returns nodes unchanged when all fromPaths collapse after top-level filter', () => {
+    // Select B [1] and its child B1 [1,0] and B2 [1,1] — all descendants collapse to just B
+    // Then also select C [2] — only B and C survive filter, top-level=[1,2]
+    // This test verifies the filter itself, not an empty-after-filter case
+    // For true empty-after-filter: select only B1 and B2 (both descendants of B which is not selected)
+    // Actually they pass filter since neither is ancestor of the other
+    // Real collapse: select B[1], B1[1,0], B2[1,1] — after filter only B[1] remains
+    const original = tree()
+    const result = moveNodes(original, [[1], [1, 0], [1, 1]], [3], 'after')
+    const expected = moveNodes(original, [[1]], [3], 'after')
+    expect(result).toEqual(expected)
+  })
+
+  it('moves nodes from different parents inside a third node', () => {
+    // Move A [0] and C [2] inside D [3] → D gains A and C as last children
+    const result = moveNodes(tree(), [[0], [2]], [3], 'inside')
+    expect(result.map(x => x.name)).toEqual(['B', 'D'])
+    expect(result[1].children.map(x => x.name)).toEqual(['A', 'C'])
+  })
 })

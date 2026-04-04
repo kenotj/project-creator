@@ -103,7 +103,7 @@ export function isAncestorOf(ancestor: number[], descendant: number[]): boolean 
 
 /**
  * Adjust `toPath` to account for the removal of a node at `removedPath`.
- * Mirrors the logic inside `moveNode` lines 127–141.
+ * Same algorithm as the inline adjustment in `moveNode`, extracted for reuse.
  */
 function adjustPathAfterRemoval(toPath: number[], removedPath: number[]): number[] {
   const adjusted = [...toPath]
@@ -141,24 +141,7 @@ export function moveNode(
   // Remove the node from its current location
   let result = deleteNodeAt(nodes, fromPath)
 
-  // Adjust toPath to account for the index shift caused by the removal of fromPath.
-  // Find the deepest level d where fromPath and toPath share the same parent prefix.
-  // At that level, if fromPath[d] < toPath[d], the removal shifted toPath[d] down by 1.
-  const adjustedToPath = [...toPath]
-  const sharedDepth = Math.min(fromPath.length, toPath.length)
-  for (let d = 0; d < sharedDepth; d++) {
-    // Check that the two paths share the same parent at depth d
-    // (i.e., fromPath[0..d-1] === toPath[0..d-1])
-    const samePrefix = fromPath.slice(0, d).every((v, i) => v === toPath[i])
-    if (!samePrefix) break
-    if (d === fromPath.length - 1) {
-      // This is the level where the deletion happened
-      if (fromPath[d] < toPath[d]) {
-        adjustedToPath[d] -= 1
-      }
-      break
-    }
-  }
+  const adjustedToPath = adjustPathAfterRemoval(toPath, fromPath)
 
   if (position === 'inside') {
     // Append as last child of the target node
