@@ -61,6 +61,13 @@ describe('TemplateEditor working copy', () => {
   })
 })
 
+describe('TemplateEditor: description panel', () => {
+  it('does not show description panel initially', () => {
+    renderEditor({ template: templateWithFolders, templates: [templateWithFolders] })
+    expect(screen.queryByText('Description')).not.toBeInTheDocument()
+  })
+})
+
 describe('TemplateEditor: copy and paste', () => {
   it('Cmd+C then Cmd+V inserts a copy of the focused node after itself', async () => {
     const { container } = render(

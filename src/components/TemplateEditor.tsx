@@ -1,10 +1,12 @@
 // src/components/TemplateEditor.tsx
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import { CopyIcon, Trash2Icon, SaveIcon, FolderPlusIcon } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { ScrollArea } from './ui/scroll-area'
 import { FolderTree } from './FolderTree'
+import { DescriptionPanel } from './DescriptionPanel'
 import { GenerateDialog } from './GenerateDialog'
 import { DeleteTemplateDialog } from './DeleteTemplateDialog'
 import { validateName } from '@/lib/validation'
@@ -54,6 +56,8 @@ export function TemplateEditor({
   const [editingPath, setEditingPath] = useState<number[] | null>(null)
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [clipboard, setClipboard] = useState<FolderNode[] | null>(null)
+  const [descriptionPanelPath, setDescriptionPanelPath] = useState<number[] | null>(null)
 
   // Reset local state when selected template changes
   useEffect(() => {
@@ -68,6 +72,7 @@ export function TemplateEditor({
       setFocusedPath(null)
       setEditingPath(null)
       setExpandedPaths(getAllPathStrings(workingCopy?.folders ?? template.folders))
+      setDescriptionPanelPath(null)
     }
   }, [template?.id]) // workingCopy intentionally excluded — read at load time only
 
@@ -98,6 +103,33 @@ export function TemplateEditor({
 
   const handleAddFolder = () => {
     setFolders((prev) => [...prev, { name: 'New Folder', children: [] }])
+  }
+
+  const handleCopy = (paths: string[]) => {
+    const clones = paths
+      .map(p => getNodeAtPath(folders, p.split(',').map(Number)))
+      .filter((n): n is FolderNode => n !== undefined)
+      .map(n => JSON.parse(JSON.stringify(n)) as FolderNode)
+    if (clones.length > 0) setClipboard(clones)
+  }
+
+  const handlePaste = (afterPath: number[] | null) => {
+    if (!clipboard) return
+    setFolders(prev => {
+      let current = prev
+      for (const node of clipboard) {
+        const copy = JSON.parse(JSON.stringify(node)) as FolderNode
+        if (afterPath !== null) {
+          const siblings = getSiblingsAtPath(current, afterPath)
+          copy.name = uniqueSiblingName(siblings, copy.name)
+          current = insertNodeAfter(current, afterPath, copy)
+        } else {
+          copy.name = uniqueSiblingName(current, copy.name)
+          current = [...current, copy]
+        }
+      }
+      return current
+    })
   }
 
   const handleAddSubfolder = (path: number[]) => {
@@ -179,6 +211,12 @@ export function TemplateEditor({
       return current
     })
     setSelectedPaths([])
+    if (descriptionPanelPath !== null) {
+      const panelStr = descriptionPanelPath.join(',')
+      if (paths.includes(panelStr)) {
+        setDescriptionPanelPath(null)
+      }
+    }
   }
 
   const handleNameChange = (val: string) => {
@@ -261,6 +299,36 @@ export function TemplateEditor({
     })
   }
 
+  // Compute set of paths that have descriptions (for dot indicator)
+  const descriptionPaths = new Set<string>()
+  function collectDescriptionPaths(nodes: FolderNode[], parentPath: number[]) {
+    nodes.forEach((node, i) => {
+      const path = [...parentPath, i]
+      if (node.description) descriptionPaths.add(path.join(','))
+      collectDescriptionPaths(node.children, path)
+    })
+  }
+  collectDescriptionPaths(folders, [])
+
+  const handleEditDescription = (path: number[]) => {
+    setDescriptionPanelPath(path)
+  }
+
+  const handleDescriptionChange = (value: string) => {
+    if (!descriptionPanelPath) return
+    setFolders(prev => {
+      const update = (nodes: FolderNode[], remaining: number[]): FolderNode[] =>
+        nodes.map((n, i) =>
+          i === remaining[0]
+            ? remaining.length === 1
+              ? { ...n, description: value || undefined }
+              : { ...n, children: update(n.children, remaining.slice(1)) }
+            : n
+        )
+      return update(prev, descriptionPanelPath)
+    })
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar — only shown when template exists */}
@@ -315,37 +383,57 @@ export function TemplateEditor({
       )}
 
       {/* Tree area */}
-      <ScrollArea className="flex-1 px-3 py-2">
-        {template ? (
-          <div className="flex-1 flex flex-col select-none">
-            <FolderTree
-              templateName={name}
-              nodes={folders}
-              selectedPaths={selectedPaths}
-              focusedPath={focusedPath}
-              editingPath={editingPath}
-              expandedPaths={expandedPaths}
-              onSelect={setSelectedPaths}
-              onFocusChange={setFocusedPath}
-              onEditingChange={setEditingPath}
-              onToggleExpand={handleToggleExpand}
-              onAddSubfolder={handleAddSubfolder}
-              onAddSiblingAfter={handleAddSiblingAfter}
-              onRename={handleRename}
-              onDuplicate={handleDuplicateNodes}
-              onDelete={handleDeleteNodes}
-              onIndent={handleIndent}
-              onOutdent={handleOutdent}
-              onMove={handleMove}
-              onMoveMultiple={handleMoveMultiple}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground pt-8 select-none">
-            Select or create a template to get started.
-          </div>
-        )}
-      </ScrollArea>
+      <div className="flex-1 flex min-h-0">
+        <ScrollArea className="flex-1 px-3 py-2">
+          {template ? (
+            <div className="flex-1 flex flex-col select-none">
+              <FolderTree
+                templateName={name}
+                nodes={folders}
+                selectedPaths={selectedPaths}
+                focusedPath={focusedPath}
+                editingPath={editingPath}
+                expandedPaths={expandedPaths}
+                onSelect={setSelectedPaths}
+                onFocusChange={setFocusedPath}
+                onEditingChange={setEditingPath}
+                onToggleExpand={handleToggleExpand}
+                onAddSubfolder={handleAddSubfolder}
+                onAddSiblingAfter={handleAddSiblingAfter}
+                onRename={handleRename}
+                onDuplicate={handleDuplicateNodes}
+                onDelete={handleDeleteNodes}
+                onIndent={handleIndent}
+                onOutdent={handleOutdent}
+                onMove={handleMove}
+                onMoveMultiple={handleMoveMultiple}
+                onCopy={handleCopy}
+                onPaste={handlePaste}
+                onEditDescription={handleEditDescription}
+                descriptionPaths={descriptionPaths}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-sm text-muted-foreground pt-8 select-none">
+              Select or create a template to get started.
+            </div>
+          )}
+        </ScrollArea>
+        {descriptionPanelPath !== null && (() => {
+          const node = getNodeAtPath(folders, descriptionPanelPath)
+          if (!node) return null
+          return (
+            <div className="w-64 flex-shrink-0">
+              <DescriptionPanel
+                folderName={node.name}
+                description={node.description ?? ''}
+                onChange={handleDescriptionChange}
+                onClose={() => setDescriptionPanelPath(null)}
+              />
+            </div>
+          )
+        })()}
+      </div>
 
       {/* Action bar — always rendered, buttons disabled when no template */}
       <div className="flex items-center gap-1.5 px-3 py-2 border-t border-border">
