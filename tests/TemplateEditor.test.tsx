@@ -66,6 +66,41 @@ describe('TemplateEditor: description panel', () => {
     renderEditor({ template: templateWithFolders, templates: [templateWithFolders] })
     expect(screen.queryByText('Description')).not.toBeInTheDocument()
   })
+
+  it('enables save button when description is added', async () => {
+    const { container } = renderEditor({
+      template: templateWithFolders,
+      templates: [templateWithFolders],
+    })
+
+    // Save button should be disabled initially (no changes)
+    const saveBtn = screen.getByTitle('Save template')
+    expect(saveBtn).toBeDisabled()
+
+    // Click the first folder to select it
+    const firstRow = container.querySelector('[data-path="0"]') as HTMLElement
+    await act(async () => {
+      fireEvent.click(firstRow)
+    })
+
+    // Click the "Edit description" inline button
+    const editDescBtn = screen.getByTitle('Edit description')
+    await act(async () => {
+      fireEvent.click(editDescBtn)
+    })
+
+    // Description panel should now be visible
+    expect(screen.getByText('Description')).toBeInTheDocument()
+
+    // Type a description
+    const textarea = screen.getByPlaceholderText('Describe the purpose of this folder...')
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: 'Test description' } })
+    })
+
+    // Save button should now be enabled
+    expect(saveBtn).not.toBeDisabled()
+  })
 })
 
 describe('TemplateEditor: copy and paste', () => {

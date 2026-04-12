@@ -78,7 +78,7 @@ export function computeMarqueeHits(
 export function FolderTree({
   templateName, nodes, selectedPaths, focusedPath, editingPath, expandedPaths,
   onSelect, onFocusChange, onEditingChange, onToggleExpand,
-  onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete,
+  onAddSubfolder, onAddSiblingAfter: _onAddSiblingAfter, onRename, onDuplicate, onDelete,
   onIndent, onOutdent, onMove, onMoveMultiple, onCopy, onPaste,
   onEditDescription, descriptionPaths
 }: FolderTreeProps) {

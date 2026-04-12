@@ -1,6 +1,5 @@
 // src/components/TemplateEditor.tsx
 import { useState, useEffect, useCallback } from 'react'
-import { toast } from 'sonner'
 import { CopyIcon, Trash2Icon, SaveIcon, FolderPlusIcon } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
