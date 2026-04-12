@@ -24,4 +24,20 @@ describe('FolderNode serialization', () => {
     const dict = { name: 'src' }
     expect(folderNodeFromDict(dict)).toEqual({ name: 'src', children: [] })
   })
+
+  it('round-trips a node with description', () => {
+    const node: FolderNode = { name: 'src', description: 'Source code', children: [] }
+    expect(folderNodeFromDict(folderNodeToDict(node))).toEqual(node)
+  })
+
+  it('omits description key when undefined', () => {
+    const node: FolderNode = { name: 'src', children: [] }
+    const dict = folderNodeToDict(node)
+    expect(dict).not.toHaveProperty('description')
+  })
+
+  it('handles missing description key in dict', () => {
+    const dict = { name: 'src', children: [] }
+    expect(folderNodeFromDict(dict)).toEqual({ name: 'src', children: [] })
+  })
 })
