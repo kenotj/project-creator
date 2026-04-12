@@ -21,6 +21,8 @@ const baseProps = {
   onRename: vi.fn(),
   onDuplicate: vi.fn(),
   onDelete: vi.fn(),
+  hasDescription: false,
+  onEditDescription: vi.fn(),
 }
 
 function renderRow(overrides = {}) {
@@ -40,5 +42,17 @@ describe('FolderTreeRow isPreview', () => {
   it('does not apply selection style when isPreview is false and not selected', () => {
     const { container } = renderRow({ isPreview: false })
     expect(container.querySelector('.bg-accent')).not.toBeInTheDocument()
+  })
+})
+
+describe('FolderTreeRow description', () => {
+  it('shows dot indicator when hasDescription is true', () => {
+    const { container } = renderRow({ hasDescription: true })
+    expect(container.querySelector('[data-description-dot]')).toBeInTheDocument()
+  })
+
+  it('does not show dot indicator when hasDescription is false', () => {
+    const { container } = renderRow({ hasDescription: false })
+    expect(container.querySelector('[data-description-dot]')).not.toBeInTheDocument()
   })
 })

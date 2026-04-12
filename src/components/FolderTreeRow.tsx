@@ -11,6 +11,7 @@ import {
   PencilIcon,
   CopyIcon,
   Trash2Icon,
+  FileTextIcon,
 } from 'lucide-react'
 import { Button } from './ui/button'
 import {
@@ -53,6 +54,8 @@ export interface FolderTreeRowProps {
   onRename: (path: number[], newName: string) => void
   onDuplicate: (paths: string[]) => void
   onDelete: (paths: string[]) => void
+  hasDescription?: boolean
+  onEditDescription?: (path: number[]) => void
 }
 
 export function FolderTreeRow({
@@ -76,6 +79,8 @@ export function FolderTreeRow({
   onRename,
   onDuplicate,
   onDelete,
+  hasDescription,
+  onEditDescription,
 }: FolderTreeRowProps) {
   const [renameValue, setRenameValue] = useState(node.name)
   const [renameError, setRenameError] = useState<string | null>(null)
@@ -230,9 +235,28 @@ export function FolderTreeRow({
               </span>
             )}
 
+            {hasDescription && (
+              <span
+                data-description-dot
+                className="w-1.5 h-1.5 rounded-full bg-primary/60 flex-shrink-0 ml-1"
+              />
+            )}
+
             {/* Inline actions (only for single select) */}
             {!isEditing && isSelected && selectedPaths.length === 1 && (
               <div className="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-200">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEditDescription?.(path)
+                  }}
+                  title="Edit description"
+                >
+                  <FileTextIcon className="w-3.5 h-3.5" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -257,6 +281,10 @@ export function FolderTreeRow({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem onClick={() => onEditDescription?.(path)}>
+                      <FileTextIcon className="w-3.5 h-3.5 mr-2" />
+                      Edit Description
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onEditingChange(path)}>
                       <PencilIcon className="w-3.5 h-3.5 mr-2" />
                       Rename
@@ -285,6 +313,10 @@ export function FolderTreeRow({
         <ContextMenuItem onClick={() => onAddSubfolder(path)}>
           <Plus className="w-3.5 h-3.5 mr-2" />
           Add Subfolder
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onEditDescription?.(path)}>
+          <FileTextIcon className="w-3.5 h-3.5 mr-2" />
+          Edit Description
         </ContextMenuItem>
         <ContextMenuItem onClick={() => onEditingChange(path)}>
           <PencilIcon className="w-3.5 h-3.5 mr-2" />
