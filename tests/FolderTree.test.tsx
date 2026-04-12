@@ -86,6 +86,8 @@ function makeTreeProps(overrides: Partial<Parameters<typeof FolderTree>[0]> = {}
     onMoveMultiple: vi.fn(),
     onCopy: vi.fn(),
     onPaste: vi.fn(),
+    onEditDescription: vi.fn(),
+    descriptionPaths: new Set<string>(),
     ...overrides,
   }
 }
@@ -182,5 +184,75 @@ describe('FolderTree keyboard: Shift+Arrow rubber-band selection', () => {
     )
     fireEvent.keyDown(container.firstChild as HTMLElement, { key: 'ArrowDown' })
     expect(onSelect).toHaveBeenCalledWith([])
+  })
+})
+
+describe('FolderTree keyboard: Cmd+C / Cmd+V', () => {
+  it('Cmd+C calls onCopy with focusedPath when no selection', () => {
+    const onCopy = vi.fn()
+    const { container } = render(
+      <FolderTree {...makeTreeProps({ onCopy, focusedPath: [0], selectedPaths: [] })} />
+    )
+    fireEvent.keyDown(container.firstChild as HTMLElement, {
+      key: 'c',
+      metaKey: true,
+    })
+    expect(onCopy).toHaveBeenCalledWith(['0'])
+  })
+
+  it('Cmd+C calls onCopy with all selectedPaths when selection is non-empty', () => {
+    const onCopy = vi.fn()
+    const { container } = render(
+      <FolderTree
+        {...makeTreeProps({
+          nodes: threeNodes,
+          onCopy,
+          focusedPath: [0],
+          selectedPaths: ['0', '1'],
+          expandedPaths: new Set(['0', '1', '2']),
+        })}
+      />
+    )
+    fireEvent.keyDown(container.firstChild as HTMLElement, {
+      key: 'c',
+      metaKey: true,
+    })
+    expect(onCopy).toHaveBeenCalledWith(['0', '1'])
+  })
+
+  it('Cmd+C filters out descendants from selection', () => {
+    const onCopy = vi.fn()
+    const nestedNodes: FolderNode[] = [
+      { name: 'Parent', children: [{ name: 'Child', children: [] }] },
+    ]
+    const { container } = render(
+      <FolderTree
+        {...makeTreeProps({
+          nodes: nestedNodes,
+          onCopy,
+          focusedPath: [0],
+          selectedPaths: ['0', '0,0'],  // parent and its child
+          expandedPaths: new Set(['0', '0,0']),
+        })}
+      />
+    )
+    fireEvent.keyDown(container.firstChild as HTMLElement, {
+      key: 'c',
+      metaKey: true,
+    })
+    // '0,0' is a descendant of '0' — should be filtered out
+    expect(onCopy).toHaveBeenCalledWith(['0'])
+  })
+
+  it('Cmd+V calls onPaste with focusedPath', () => {
+    const onPaste = vi.fn()
+    const { container } = render(
+      <FolderTree {...makeTreeProps({ onPaste, focusedPath: [0] })} />
+    )
+    fireEvent.keyDown(container.firstChild as HTMLElement, {
+      key: 'v',
+      metaKey: true,
+    })
+    expect(onPaste).toHaveBeenCalledWith([0])
   })
 })

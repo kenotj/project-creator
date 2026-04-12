@@ -46,6 +46,8 @@ interface FolderTreeProps {
   onMoveMultiple: (fromPaths: number[][], toPath: number[], position: 'before' | 'after' | 'inside') => void
   onCopy?: (paths: string[]) => void
   onPaste?: (afterPath: number[] | null) => void
+  onEditDescription?: (path: number[]) => void
+  descriptionPaths?: Set<string>
 }
 
 export function computeMarqueeHits(
@@ -77,7 +79,8 @@ export function FolderTree({
   templateName, nodes, selectedPaths, focusedPath, editingPath, expandedPaths,
   onSelect, onFocusChange, onEditingChange, onToggleExpand,
   onAddSubfolder, onAddSiblingAfter, onRename, onDuplicate, onDelete,
-  onIndent, onOutdent, onMove, onMoveMultiple, onCopy, onPaste
+  onIndent, onOutdent, onMove, onMoveMultiple, onCopy, onPaste,
+  onEditDescription, descriptionPaths
 }: FolderTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{ x1: number, y1: number, x2: number, y2: number } | null>(null)
@@ -503,6 +506,30 @@ export function FolderTree({
       }
       return
     }
+
+    // Cmd/Ctrl+C
+    if (e.key === 'c' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      if (isRootFocused) return
+      const source = selectedPaths.length > 0
+        ? selectedPaths
+        : focusedPath ? [focusedPath.join(',')] : []
+      if (source.length === 0) return
+      // Filter descendants: keep only paths that have no ancestor also in source
+      const parsed = source.map(s => s.split(',').map(Number))
+      const filtered = source.filter((_, i) =>
+        !parsed.some((q, j) => j !== i && isAncestorOf(q, parsed[i]))
+      )
+      onCopy?.(filtered)
+      return
+    }
+
+    // Cmd/Ctrl+V
+    if (e.key === 'v' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      onPaste?.(isRootFocused ? null : focusedPath)
+      return
+    }
   }
 
   return (
@@ -662,6 +689,8 @@ export function FolderTree({
                       onRename={onRename}
                       onDuplicate={onDuplicate}
                       onDelete={onDelete}
+                      hasDescription={descriptionPaths?.has(pathStr) ?? false}
+                      onEditDescription={onEditDescription}
                     />
 
                     {/* Drop indicator: blue line AFTER this row */}
