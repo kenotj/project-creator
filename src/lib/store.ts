@@ -4,6 +4,7 @@ import { appLocalDataDir } from '@tauri-apps/api/path'
 import { templateFromDict, templateToDict, type Template } from './models'
 
 const CONFIG_FILE = 'templates.json'
+const SETTINGS_FILE = 'settings.json'
 
 async function getConfigPath(): Promise<string> {
   const dir = await appLocalDataDir()
@@ -78,4 +79,48 @@ export function uniqueTemplateName(templates: Template[], baseName: string): str
   let i = 2
   while (names.has(`${baseName} ${i}`)) i++
   return `${baseName} ${i}`
+}
+
+// --- Settings persistence ---
+
+interface Settings {
+  lastDestination?: string
+}
+
+async function getSettingsPath(): Promise<string> {
+  const dir = await appLocalDataDir()
+  return `${dir}/${SETTINGS_FILE}`
+}
+
+async function loadSettings(): Promise<Settings> {
+  try {
+    const path = await getSettingsPath()
+    const text = await readTextFile(path)
+    return JSON.parse(text) as Settings
+  } catch {
+    return {}
+  }
+}
+
+async function saveSettings(settings: Settings): Promise<void> {
+  const dirPath = await getDirPath()
+  const filePath = await getSettingsPath()
+  const dirExists = await exists(dirPath)
+  if (!dirExists) {
+    await mkdir(dirPath, { recursive: true })
+  }
+  await writeTextFile(filePath, JSON.stringify(settings, null, 2))
+}
+
+export async function loadLastDestination(): Promise<string | null> {
+  const settings = await loadSettings()
+  if (!settings.lastDestination) return null
+  const pathExists = await exists(settings.lastDestination)
+  return pathExists ? settings.lastDestination : null
+}
+
+export async function saveLastDestination(path: string): Promise<void> {
+  const settings = await loadSettings()
+  settings.lastDestination = path
+  await saveSettings(settings)
 }

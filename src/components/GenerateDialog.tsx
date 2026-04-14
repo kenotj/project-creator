@@ -1,5 +1,5 @@
 // src/components/GenerateDialog.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
@@ -7,6 +7,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { createProject } from '@/lib/generate'
+import { loadLastDestination, saveLastDestination } from '@/lib/store'
 import { validateName } from '@/lib/validation'
 import type { Template } from '@/lib/models'
 import { cn } from '@/lib/utils'
@@ -23,6 +24,14 @@ export function GenerateDialog({ template, open: isOpen, onClose }: GenerateDial
   const [projectNameError, setProjectNameError] = useState<string | null>(null)
   const [destError, setDestError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      loadLastDestination().then((saved) => {
+        if (saved) setDestination(saved)
+      })
+    }
+  }, [isOpen])
 
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false })
@@ -46,6 +55,7 @@ export function GenerateDialog({ template, open: isOpen, onClose }: GenerateDial
     setDestError(null)
     try {
       const result = await createProject(template, projectName.trim(), destination)
+      await saveLastDestination(destination)
       toast.success('Project created', { description: result.path })
       handleClose()
     } catch (err: unknown) {
